@@ -13,7 +13,8 @@ const DEFAULT_STATE = {
     { id: 4, name: "Người chơi 4", score: 0 }
   ],
   history: [],
-  currentScreen: 'welcome'
+  currentScreen: 'welcome',
+  scoreMode: '2/4'
 };
 
 let state = { ...DEFAULT_STATE };
@@ -26,9 +27,17 @@ const RANDOM_NAMES = [
 ];
 
 // Active state variables for bottom sheets
+const ROUND_SCORE_BASE = { first: 4, second: 2, third: -2, fourth: -4 };
+const ROUND_SCORE_MULTIPLIERS = {
+  '1/2': 0.5,
+  '2/4': 1,
+  '5/10': 2.5
+};
+
 let roundSelectionState = {
   step: 1, // 1: Nhất, 2: Nhì, 3: Ba, 4: Summary
-  ranks: [null, null, null, null] // Array of player IDs for Rank 1, 2, 3, 4
+  ranks: [null, null, null, null], // Array of player IDs for Rank 1, 2, 3, 4
+  scoreMode: '2/4'
 };
 
 let chopSelectionState = {
@@ -75,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function initApp() {
   loadState();
   setupEventListeners();
+  renderRoundScoreModeOptions();
   renderScreen();
   if (state.currentScreen === 'dashboard') {
     renderScoreboard();
@@ -94,6 +104,7 @@ function loadState() {
       }
       if (!state.history) state.history = [];
       if (!state.currentScreen) state.currentScreen = 'welcome';
+      if (!state.scoreMode) state.scoreMode = DEFAULT_STATE.scoreMode;
     } catch (e) {
       console.error("Error parsing saved state:", e);
       state = { ...DEFAULT_STATE };
@@ -184,6 +195,20 @@ function setupEventListeners() {
   document.getElementById("btn-restart-round").addEventListener("click", () => startRoundStep(1));
   document.getElementById("btn-confirm-round").addEventListener("click", handleSaveRound);
 
+  // --- Setup Score Mode Selection ---
+  document.querySelectorAll(".btn-score-mode").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const selectedMode = e.currentTarget.getAttribute("data-mode");
+      if (selectedMode) {
+        state.scoreMode = selectedMode;
+        document.getElementById("setup-score-mode").value = selectedMode;
+        document.querySelectorAll(".btn-score-mode").forEach(item => {
+          item.classList.toggle("active", item.getAttribute("data-mode") === selectedMode);
+        });
+      }
+    });
+  });
+
   // --- Chop Flow Event Handlers ---
   document.getElementById("btn-restart-chop").addEventListener("click", () => startChopStep(1));
   document.getElementById("btn-confirm-chop").addEventListener("click", handleSaveChop);
@@ -266,6 +291,8 @@ function handleStartGame(e) {
     return;
   }
 
+  const selectedMode = document.getElementById("setup-score-mode").value || '2/4';
+
   // Setup state
   state.players = [
     { id: 1, name: p1, score: 0 },
@@ -274,6 +301,7 @@ function handleStartGame(e) {
     { id: 4, name: p4, score: 0 }
   ];
   state.history = [];
+  state.scoreMode = selectedMode;
 
   saveState();
   renderScoreboard();
@@ -319,6 +347,9 @@ function renderScoreboard() {
     if (player.score > 0) scoreClass = 'score-positive';
     else if (player.score < 0) scoreClass = 'score-negative';
 
+    // Compute quick-adjust amount scaled by score mode (base 2)
+    const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
+    const quickAmt = Math.round(2 * multiplier);
     const cardHTML = `
       <div class="${cardClass}" data-player-id="${player.id}">
         <!-- Left Part: Rank & Player Info -->
@@ -339,13 +370,13 @@ function renderScoreboard() {
 
         <!-- Center/Right Part: Score display with quick adjusters -->
         <div class="card-center">
-          <button class="btn-adjust btn-adjust-minus" onclick="adjustScoreQuick(${player.id}, -2)">-2</button>
+          <button class="btn-adjust btn-adjust-minus" onclick="adjustScoreQuick(${player.id}, -${quickAmt})">-${quickAmt}</button>
           
           <div class="score-display-wrapper">
             <span class="player-total-score ${scoreClass}">${player.score}</span>
           </div>
           
-          <button class="btn-adjust btn-adjust-plus" onclick="adjustScoreQuick(${player.id}, 2)">+2</button>
+          <button class="btn-adjust btn-adjust-plus" onclick="adjustScoreQuick(${player.id}, ${quickAmt})">+${quickAmt}</button>
         </div>
       </div>
     `;
@@ -419,7 +450,37 @@ function initRoundFlow() {
     ranks: [null, null, null, null]
   };
   openSheet("record-round");
+  updateRoundSummaryScoreLabels();
   startRoundStep(1);
+}
+
+function getRoundScoreValues(mode) {
+  const multiplier = ROUND_SCORE_MULTIPLIERS[mode] ?? ROUND_SCORE_MULTIPLIERS['2/4'];
+  return {
+    first: Math.round(ROUND_SCORE_BASE.first * multiplier),
+    second: Math.round(ROUND_SCORE_BASE.second * multiplier),
+    third: Math.round(ROUND_SCORE_BASE.third * multiplier),
+    fourth: Math.round(ROUND_SCORE_BASE.fourth * multiplier)
+  };
+}
+
+function renderRoundScoreModeOptions() {
+  document.querySelectorAll('.btn-score-mode').forEach(btn => {
+    const mode = btn.getAttribute('data-mode');
+    btn.classList.toggle('active', mode === state.scoreMode);
+  });
+  const scoreModeInput = document.getElementById('setup-score-mode');
+  if (scoreModeInput) {
+    scoreModeInput.value = state.scoreMode;
+  }
+}
+
+function updateRoundSummaryScoreLabels() {
+  const values = getRoundScoreValues(state.scoreMode);
+  document.getElementById('summary-rank-1-delta').textContent = `+${values.first} điểm`;
+  document.getElementById('summary-rank-2-delta').textContent = `+${values.second} điểm`;
+  document.getElementById('summary-rank-3-delta').textContent = `${values.third} điểm`;
+  document.getElementById('summary-rank-4-delta').textContent = `${values.fourth} điểm`;
 }
 
 function startRoundStep(step) {
@@ -432,12 +493,13 @@ function startRoundStep(step) {
     stepContainer.classList.remove("hidden");
     summaryContainer.classList.add("hidden");
 
+    const values = getRoundScoreValues(state.scoreMode);
     // Update labels based on rank selection
     const title = document.getElementById("round-step-title");
     let rankName = "";
-    if (step === 1) rankName = "NHẤT (+4)";
-    else if (step === 2) rankName = "NHÌ (+2)";
-    else if (step === 3) rankName = "BA (-2)";
+    if (step === 1) rankName = `NHẤT (+${values.first})`;
+    else if (step === 2) rankName = `NHÌ (+${values.second})`;
+    else if (step === 3) rankName = `BA (${values.third})`;
 
     title.textContent = `Chọn người chơi về ${rankName}`;
 
@@ -460,6 +522,8 @@ function startRoundStep(step) {
     stepContainer.classList.add("hidden");
     summaryContainer.classList.remove("hidden");
 
+    const values = getRoundScoreValues(state.scoreMode);
+
     // Identify 4th place (the player that wasn't chosen)
     const allIds = [1, 2, 3, 4];
     const chosenIds = roundSelectionState.ranks.slice(0, 3);
@@ -472,6 +536,8 @@ function startRoundStep(step) {
       const p = state.players.find(player => player.id === pId);
       document.getElementById(`summary-rank-${r}-name`).textContent = p ? p.name : "-";
     }
+
+    updateRoundSummaryScoreLabels();
   }
 }
 
@@ -483,13 +549,14 @@ function handleSelectRoundPlayer(playerId) {
 
 function handleSaveRound() {
   const ranks = roundSelectionState.ranks;
+  const values = getRoundScoreValues(state.scoreMode);
 
   // Ranks indexes: 0: Nhất, 1: Nhì, 2: Ba, 3: Tư
   const deltas = { 1: 0, 2: 0, 3: 0, 4: 0 };
-  deltas[ranks[0]] = 4;
-  deltas[ranks[1]] = 2;
-  deltas[ranks[2]] = -2;
-  deltas[ranks[3]] = -4;
+  deltas[ranks[0]] = values.first;
+  deltas[ranks[1]] = values.second;
+  deltas[ranks[2]] = values.third;
+  deltas[ranks[3]] = values.fourth;
 
   // Update state scores
   state.players.forEach(p => {
@@ -503,7 +570,7 @@ function handleSaveRound() {
   const name4 = state.players.find(p => p.id === ranks[3]).name;
 
   const roundNum = state.history.filter(h => h.type === 'round').length + 1;
-  const details = `Ván #${roundNum}: ${name1} Nhất, ${name2} Nhì, ${name3} Ba, ${name4} Tư`;
+  const details = `Ván #${roundNum} (${state.scoreMode}): ${name1} Nhất, ${name2} Nhì, ${name3} Ba, ${name4} Tư`;
 
   // Save history item
   const historyItem = {
@@ -523,9 +590,9 @@ function handleSaveRound() {
   renderHistory();
 
   // Floating score updates
+  const floatValues = [values.first, values.second, values.third, values.fourth];
   ranks.forEach((pId, idx) => {
-    const amount = idx === 0 ? 4 : idx === 1 ? 2 : idx === 2 ? -2 : -4;
-    triggerFloatingPoints(pId, amount);
+    triggerFloatingPoints(pId, floatValues[idx]);
   });
 }
 
@@ -598,15 +665,22 @@ function startChopStep(step) {
     step3.classList.remove("hidden");
     const grid = document.querySelector(".chop-type-grid");
 
-    // Set click handlers for chop types
+    // Set click handlers for chop types and update visible pts based on score mode
+    const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
     const buttons = grid.querySelectorAll(".btn-chop-type");
     buttons.forEach(btn => {
       // Re-create node to strip old event listeners easily
       const newBtn = btn.cloneNode(true);
       btn.parentNode.replaceChild(newBtn, btn);
 
+      // Update displayed points inside the button (if element exists)
+      const basePts = parseInt(newBtn.getAttribute("data-points"), 10) || 0;
+      const scaled = Math.round(basePts * multiplier);
+      const ptsEl = newBtn.querySelector('.chop-pts');
+      if (ptsEl) ptsEl.textContent = `+${scaled} / -${scaled}`;
+
       newBtn.addEventListener("click", () => {
-        chopSelectionState.points = parseInt(newBtn.getAttribute("data-points"), 10);
+        chopSelectionState.points = basePts; // store base, scale when applying
         chopSelectionState.typeName = newBtn.getAttribute("data-name");
         startChopStep(4);
       });
@@ -624,7 +698,8 @@ function updateChopSummaryUI() {
   const loser = state.players.find(p => p.id === chopSelectionState.loserId);
   const winner = state.players.find(p => p.id === chopSelectionState.winnerId);
   const typeName = chopSelectionState.typeName;
-  const basePts = chopSelectionState.points;
+  const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
+  const basePts = Math.round(chopSelectionState.points * multiplier);
   const qty = chopSelectionState.quantity;
   const totalPts = basePts * qty;
 
@@ -643,7 +718,8 @@ function handleSaveChop() {
   const winnerId = chopSelectionState.winnerId;
   const loserId = chopSelectionState.loserId;
   const qty = chopSelectionState.quantity;
-  const basePts = chopSelectionState.points;
+  const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
+  const basePts = Math.round(chopSelectionState.points * multiplier);
   const totalPts = basePts * qty;
   const typeName = chopSelectionState.typeName;
 
@@ -704,6 +780,10 @@ function initKillFlow() {
 function startKillStep(step) {
   killSelectionState.step = step;
 
+  // Ensure headers show scaled base values according to selected score mode
+  const killMultiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
+  const killBase = Math.round(8 * killMultiplier);
+
   const step1 = document.getElementById("kill-step-killer-container");
   const step2 = document.getElementById("kill-step-victim-container");
   const step3 = document.getElementById("kill-step-penalties-container");
@@ -713,6 +793,8 @@ function startKillStep(step) {
 
   if (step === 1) {
     step1.classList.remove("hidden");
+    const titleEl1 = step1.querySelector('.step-title');
+    if (titleEl1) titleEl1.textContent = `1. Ai là người giết? (+${killBase} điểm)`;
     const list = document.getElementById("kill-killer-list");
     list.innerHTML = "";
     state.players.forEach(p => {
@@ -727,6 +809,8 @@ function startKillStep(step) {
     });
   } else if (step === 2) {
     step2.classList.remove("hidden");
+    const titleEl2 = step2.querySelector('.step-title');
+    if (titleEl2) titleEl2.textContent = `2. Ai bị giết? (-${killBase} điểm)`;
     const list = document.getElementById("kill-victim-list");
     list.innerHTML = "";
     state.players.forEach(p => {
@@ -743,16 +827,20 @@ function startKillStep(step) {
     });
   } else if (step === 3) {
     step3.classList.remove("hidden");
+    const titleEl3 = step3.querySelector('.step-title');
+    if (titleEl3) titleEl3.textContent = `3. Chọn bộ đặc biệt còn trên tay người bị giết`;
     const container = document.getElementById("kill-penalties-grid");
     container.innerHTML = "";
+    const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
     KILL_PENALTIES.forEach(penalty => {
+      const scaled = Math.round(penalty.points * multiplier);
       const label = document.createElement("label");
       label.className = "kill-penalty-card";
       label.innerHTML = `
         <input type="checkbox" data-key="${penalty.key}" />
         <div>
           <strong>${penalty.label}</strong>
-          <span>-${penalty.points}</span>
+          <span>-${scaled}</span>
         </div>
       `;
       const checkbox = label.querySelector("input");
@@ -770,20 +858,23 @@ function startKillStep(step) {
 }
 
 function calculateKillPenaltyPoints() {
+  const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
   return KILL_PENALTIES.reduce((sum, penalty) => {
-    return sum + (killSelectionState.penalties[penalty.key] ? penalty.points : 0);
+    return sum + (killSelectionState.penalties[penalty.key] ? Math.round(penalty.points * multiplier) : 0);
   }, 0);
 }
 
 function updateKillSummaryUI() {
   const killer = state.players.find(p => p.id === killSelectionState.killerId);
   const victim = state.players.find(p => p.id === killSelectionState.victimId);
+  const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
   const bonus = calculateKillPenaltyPoints();
-  const total = 8 + bonus;
+  const base = Math.round(8 * multiplier);
+  const total = base + bonus;
 
   document.getElementById("kill-summary-killer").textContent = killer ? killer.name : "-";
   document.getElementById("kill-summary-victim").textContent = victim ? victim.name : "-";
-  document.getElementById("kill-summary-base").textContent = "+8";
+  document.getElementById("kill-summary-base").textContent = `+${base}`;
   document.getElementById("kill-summary-penalties").textContent = `-${bonus}`;
   document.getElementById("kill-summary-total").textContent = `${total > 0 ? '+' : ''}${total}`;
 
@@ -792,7 +883,7 @@ function updateKillSummaryUI() {
   if (items.length === 0) {
     detailsEl.textContent = "Không có bộ đặc biệt";
   } else {
-    detailsEl.textContent = items.map(p => `${p.label} (-${p.points})`).join(', ');
+    detailsEl.textContent = items.map(p => `${p.label} (-${Math.round(p.points * multiplier)})`).join(', ');
   }
 }
 
@@ -801,8 +892,9 @@ function handleSaveKill() {
   const victimId = killSelectionState.victimId;
   if (!killerId || !victimId) return;
 
+  const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
   const penaltyPoints = calculateKillPenaltyPoints();
-  const totalPoints = 8 + penaltyPoints;
+  const totalPoints = Math.round(8 * multiplier) + penaltyPoints;
 
   const deltas = { 1: 0, 2: 0, 3: 0, 4: 0 };
   deltas[killerId] = totalPoints;
@@ -869,12 +961,26 @@ function startToitrangStep(step) {
       });
       list.appendChild(btn);
     });
+    // Update header to show scaled winner points
+    const headerEl = document.querySelector('#toitrang-step-winner-container .step-title');
+    const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
+    const winnerPts = Math.round(12 * multiplier);
+    if (headerEl) headerEl.textContent = `Ai là người tới trắng? (+${winnerPts} điểm)`;
   } else if (step === 2) {
     // Show summary
     summaryContainer.classList.remove("hidden");
     const winnerNameEl = document.getElementById("toitrang-summary-winner");
+    const winnerDeltaEl = document.getElementById("toitrang-summary-winner-delta");
+    const othersDeltaEl = document.getElementById("toitrang-summary-others-delta");
     const winner = state.players.find(p => p.id === toitrangSelectionState.winnerId);
     winnerNameEl.textContent = winner ? winner.name : "-";
+
+    // Update deltas according to selected score mode
+    const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
+    const winnerPts = Math.round(12 * multiplier);
+    const othersPts = Math.round(4 * multiplier);
+    if (winnerDeltaEl) winnerDeltaEl.textContent = `+${winnerPts} điểm`;
+    if (othersDeltaEl) othersDeltaEl.textContent = `-${othersPts} điểm / người`;
   }
 }
 
@@ -882,12 +988,16 @@ function handleSaveToitrang() {
   const winnerId = toitrangSelectionState.winnerId;
   if (!winnerId) return;
 
+  const multiplier = ROUND_SCORE_MULTIPLIERS[state.scoreMode] ?? 1;
+  const winnerPts = Math.round(12 * multiplier);
+  const othersPts = Math.round(4 * multiplier);
+
   const deltas = { 1: 0, 2: 0, 3: 0, 4: 0 };
-  deltas[winnerId] = 12;
-  // other players -4
+  deltas[winnerId] = winnerPts;
+  // other players negative
   Object.keys(deltas).forEach(id => {
     const pid = Number(id);
-    if (pid !== winnerId) deltas[pid] = -4;
+    if (pid !== winnerId) deltas[pid] = -othersPts;
   });
 
   // Apply to state
@@ -896,7 +1006,7 @@ function handleSaveToitrang() {
   });
 
   const winner = state.players.find(p => p.id === winnerId);
-  const details = `Tới Trắng: ${winner ? winner.name : ""} (+12), người khác -4`; // simple description
+  const details = `Tới Trắng: ${winner ? winner.name : ""} (+${winnerPts}), người khác -${othersPts}`;
 
   const historyItem = {
     id: "toitrang_" + Date.now(),
@@ -911,12 +1021,12 @@ function handleSaveToitrang() {
   renderScoreboard();
   renderHistory();
 
-  // Floating animations
-  triggerFloatingPoints(winnerId, 12);
+  // Floating animations scaled
+  triggerFloatingPoints(winnerId, winnerPts);
   Object.keys(deltas).forEach(id => {
     const pid = Number(id);
     if (pid !== winnerId) {
-      triggerFloatingPoints(pid, -4);
+      triggerFloatingPoints(pid, -othersPts);
     }
   });
 }
@@ -1102,7 +1212,8 @@ function handleResetAll() {
       { id: 4, name: "Người chơi 4", score: 0 }
     ],
     history: [],
-    currentScreen: 'welcome'
+    currentScreen: 'welcome',
+    scoreMode: DEFAULT_STATE.scoreMode
   };
 
   // Clear setup inputs to defaults
@@ -1112,6 +1223,7 @@ function handleResetAll() {
 
   closeAllModals();
   closeAllSheets();
+  renderRoundScoreModeOptions();
   saveState();
   showScreen("welcome");
 }

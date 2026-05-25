@@ -81,6 +81,16 @@
               </div>
             </div>
 
+            <div class="input-group">
+              <label>Chọn loại điểm ván</label>
+              <div class="score-mode-options" id="setup-score-mode-options">
+                <button type="button" class="btn btn-outline btn-score-mode" data-mode="1/2">1/2</button>
+                <button type="button" class="btn btn-outline btn-score-mode active" data-mode="2/4">2/4</button>
+                <button type="button" class="btn btn-outline btn-score-mode" data-mode="5/10">5/10</button>
+              </div>
+              <input type="hidden" id="setup-score-mode" value="2/4">
+            </div>
+
             <button type="submit" id="btn-start" class="btn btn-primary btn-large btn-block">
               Bắt đầu tính điểm
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none"
@@ -196,22 +206,22 @@
               <div class="summary-item rank-1">
                 <span class="rank-badge">1</span>
                 <span class="player-name" id="summary-rank-1-name">-</span>
-                <span class="player-delta">+4 điểm</span>
+                <span class="player-delta" id="summary-rank-1-delta">+4 điểm</span>
               </div>
               <div class="summary-item rank-2">
                 <span class="rank-badge">2</span>
                 <span class="player-name" id="summary-rank-2-name">-</span>
-                <span class="player-delta">+2 điểm</span>
+                <span class="player-delta" id="summary-rank-2-delta">+2 điểm</span>
               </div>
               <div class="summary-item rank-3">
                 <span class="rank-badge">3</span>
                 <span class="player-name" id="summary-rank-3-name">-</span>
-                <span class="player-delta">-2 điểm</span>
+                <span class="player-delta" id="summary-rank-3-delta">-2 điểm</span>
               </div>
               <div class="summary-item rank-4">
                 <span class="rank-badge">4</span>
                 <span class="player-name" id="summary-rank-4-name">-</span>
-                <span class="player-delta">-4 điểm</span>
+                <span class="player-delta" id="summary-rank-4-delta">-4 điểm</span>
               </div>
             </div>
             <div class="sheet-actions">
@@ -408,12 +418,12 @@
                 <div class="summary-item rank-1">
                   <span class="rank-badge">👑</span>
                   <span class="player-name" id="toitrang-summary-winner">-</span>
-                  <span class="player-delta" style="color: var(--color-success)">+12 điểm</span>
+                  <span class="player-delta" id="toitrang-summary-winner-delta" style="color: var(--color-success)">+12 điểm</span>
                 </div>
                 <div class="summary-item rank-4" style="margin-top: 12px; background: rgba(239, 68, 68, 0.05);">
                   <span class="player-name" style="margin-left: 0; font-size: 13px; color: var(--text-secondary);">3
                     người chơi còn lại:</span>
-                  <span class="player-delta" style="color: var(--color-danger)">-4 điểm / người</span>
+                  <span class="player-delta" id="toitrang-summary-others-delta" style="color: var(--color-danger)">-4 điểm / người</span>
                 </div>
               </div>
               <div class="sheet-actions">

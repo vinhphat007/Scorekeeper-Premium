@@ -83,16 +83,16 @@
 
             <div class="input-group">
               <label>Chọn loại điểm ván</label>
-              <div class="score-mode-options" id="setup-score-mode-options">
-                <button type="button" class="btn btn-outline btn-score-mode" data-mode="1/2">1/2</button>
-                <button type="button" class="btn btn-outline btn-score-mode active" data-mode="2/4">2/4</button>
-                <button type="button" class="btn btn-outline btn-score-mode" data-mode="5/10">5/10</button>
+                  <div class="score-mode-options" id="setup-score-mode-options">
+                    <button type="button" class="btn btn-outline btn-score-mode" data-mode="1/2">1/2</button>
+                    <button type="button" class="btn btn-outline btn-score-mode active" data-mode="2/4">2/4</button>
+                    <button type="button" class="btn btn-outline btn-score-mode" data-mode="5/10">5/10</button>
               </div>
               <input type="hidden" id="setup-score-mode" value="2/4">
             </div>
 
             <button type="submit" id="btn-start" class="btn btn-primary btn-large btn-block">
-              Bắt đầu tính điểm
+              Bắt đầu ghi điểm
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -300,7 +300,7 @@
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                     <polyline points="12 5 19 12 12 19"></polyline>
                   </svg>
-                  <span class="chop-type-label" id="chop-summary-type">Heo Đen</span>
+                  <span class="chop-type-label" id="chop-summary-type">Bộ A</span>
                 </div>
                 <div class="summary-actor winner">
                   <span class="actor-label">Được cộng</span>
@@ -350,7 +350,7 @@
             </div>
 
             <div class="kill-step hidden" id="kill-step-penalties-container">
-              <h4 class="step-title">3. Chọn bộ đặc biệt còn trên tay người bị giết</h4>
+              <h4 class="step-title">3. Chọn bộ đặc biệt trên tay người thua</h4>
               <div id="kill-penalties-grid" class="kill-penalties-grid"></div>
               <div class="sheet-actions">
                 <button type="button" class="btn btn-primary btn-block" onclick="startKillStep(4)">Tiếp tục</button>
@@ -370,7 +370,7 @@
                   <strong id="kill-summary-victim">-</strong>
                 </div>
                 <div class="summary-row">
-                  <span>Điểm giết cơ bản</span>
+                  <span>Điểm cơ bản (đánh bại)</span>
                   <strong id="kill-summary-base">+8</strong>
                 </div>
                 <div class="summary-row">
@@ -383,7 +383,7 @@
                 </div>
                 <div class="summary-note" id="kill-summary-penalty-items">Không có bộ đặc biệt</div>
               </div>
-              <div class="sheet-actions">
+                <div class="sheet-actions">
                 <button id="btn-confirm-kill" class="btn btn-primary btn-block">Xác nhận giết</button>
                 <button id="btn-restart-kill" class="btn btn-outline btn-block">Chọn lại</button>
               </div>
@@ -398,7 +398,7 @@
       <div class="bottom-sheet">
         <div class="sheet-drag-handle"></div>
         <div class="sheet-header">
-          <h3>Ghi Nhận Tới Trắng</h3>
+          <h3>Ghi Nhận Toàn Thắng</h3>
           <button class="btn-close-sheet">&times;</button>
         </div>
         <div class="sheet-body">
@@ -452,7 +452,7 @@
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
-              <p>Chưa có lịch sử tính điểm nào cho ván đấu này.</p>
+              <p>Chưa có lịch sử ghi điểm nào cho ván đấu này.</p>
             </div>
             <div id="history-items" class="history-items">
               <!-- Dynamically populated history list -->

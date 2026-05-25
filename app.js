@@ -758,7 +758,7 @@ function handleSaveChop() {
 
 
 // ===============================
-// KILL / GIẾT RULE IMPLEMENTATION
+// KILL / ĐÁNH BẠI RULE IMPLEMENTATION
 // ===============================
 function initKillFlow() {
   killSelectionState = {
@@ -1006,7 +1006,7 @@ function handleSaveToitrang() {
   });
 
   const winner = state.players.find(p => p.id === winnerId);
-  const details = `Tới Trắng: ${winner ? winner.name : ""} (+${winnerPts}), người khác -${othersPts}`;
+  const details = `Toàn thắng: ${winner ? winner.name : ""} (+${winnerPts}), người khác -${othersPts}`;
 
   const historyItem = {
     id: "toitrang_" + Date.now(),
@@ -1062,11 +1062,12 @@ function renderHistory() {
   historyReversed.forEach(item => {
     const timeStr = formatTime(item.timestamp);
 
-    // Determine history card icon / accent
-    let accentBadge = "⚙️";
-    if (item.type === 'round') accentBadge = "🏆";
-    else if (item.type === 'chop') accentBadge = "⚡";
-    else if (item.type === 'kill') accentBadge = "🔪";
+        // Determine history card icon / accent
+        let accentBadge = "⚙️";
+        if (item.type === 'round') accentBadge = "🏆";
+        else if (item.type === 'chop') accentBadge = "⚡";
+        else if (item.type === 'kill') accentBadge = "🔪";
+        else if (item.type === 'toitrang') accentBadge = "🌟";
 
     let scoreGridHTML = "";
 

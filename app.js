@@ -20,10 +20,14 @@ const DEFAULT_STATE = {
 let state = { ...DEFAULT_STATE };
 
 // Pool of cool/fun Vietnamese names for random generation
+// const RANDOM_NAMES = [
+//   "Nam", "Bình", "Sơn", "Kiên", "Hùng", "Đạt", "Linh", "Thảo",
+//   "Hải", "Tuấn", "Hoàng", "Minh", "Phong", "Tiến", "Duy", "Khánh",
+//   "Lan", "Vy", "Hà", "Trang", "Hương", "Anh", "Long", "Quân"
+// ];
+
 const RANDOM_NAMES = [
-  "Nam", "Bình", "Sơn", "Kiên", "Hùng", "Đạt", "Linh", "Thảo",
-  "Hải", "Tuấn", "Hoàng", "Minh", "Phong", "Tiến", "Duy", "Khánh",
-  "Lan", "Vy", "Hà", "Trang", "Hương", "Anh", "Long", "Quân"
+  "Hùng", "Phát", "Vương", "Tuấn", "Ngân" 
 ];
 
 // Active state variables for bottom sheets

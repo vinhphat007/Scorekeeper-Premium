@@ -496,8 +496,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   font-size: 13px;
   font-weight: 800;
@@ -642,8 +642,8 @@ body {
 
 /* Quick adjuster buttons */
 .btn-adjust {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   display: flex;
@@ -777,8 +777,8 @@ body {
 .btn-close-sheet {
   background: rgba(255, 255, 255, 0.05);
   border: none;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   color: var(--text-secondary);
   font-size: 20px;

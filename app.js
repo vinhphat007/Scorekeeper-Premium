@@ -1060,26 +1060,46 @@ function renderHistory() {
   listEl.classList.remove("hidden");
   undoBtn.classList.remove("hidden");
 
+  // Build a history snapshot where each card shows the total score accumulated
+  // before that specific action was recorded.
+  const historyWithTotals = [];
+  let runningTotals = Object.fromEntries(state.players.map(p => [p.id, 0]));
+
+  state.history.forEach(item => {
+    historyWithTotals.push({
+      ...item,
+      totals: { ...runningTotals }
+    });
+
+    state.players.forEach(p => {
+      runningTotals[p.id] += item.deltas[p.id] || 0;
+    });
+  });
+
   // Show list items in reverse chronological order (newest first)
-  const historyReversed = [...state.history].reverse();
+  const historyReversed = [...historyWithTotals].reverse();
 
   historyReversed.forEach(item => {
     const timeStr = formatTime(item.timestamp);
 
-        // Determine history card icon / accent
-        let accentBadge = "⚙️";
-        if (item.type === 'round') accentBadge = "🏆";
-        else if (item.type === 'chop') accentBadge = "⚡";
-        else if (item.type === 'kill') accentBadge = "🔪";
-        else if (item.type === 'toitrang') accentBadge = "🌟";
+    // Determine history card icon / accent
+    let accentBadge = "⚙️";
+    if (item.type === 'round') accentBadge = "🏆";
+    else if (item.type === 'chop') accentBadge = "⚡";
+    else if (item.type === 'kill') accentBadge = "🔪";
+    else if (item.type === 'toitrang') accentBadge = "🌟";
 
     let scoreGridHTML = "";
 
     // Sort players in the card by original ID order
     state.players.forEach(p => {
       const val = item.deltas[p.id] || 0;
+      const total = item.totals?.[p.id] ?? 0;
       let valClass = "zero";
       let displayVal = `${val}`;
+      let totalClass = "zero";
+      let displayTotal = `${total}`;
+
       if (val > 0) {
         valClass = "pos";
         displayVal = `+${val}`;
@@ -1087,10 +1107,18 @@ function renderHistory() {
         valClass = "neg";
       }
 
+      if (total > 0) {
+        totalClass = "pos";
+        displayTotal = `+${total}`;
+      } else if (total < 0) {
+        totalClass = "neg";
+      }
+
       scoreGridHTML += `
         <div class="history-player-score">
           <span class="history-pname">${escapeHTML(p.name)}</span>
           <span class="history-pval ${valClass}">${displayVal}</span>
+          <span class="history-ptotal ${totalClass}">${displayTotal}</span>
         </div>
       `;
     });

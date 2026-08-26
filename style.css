@@ -390,6 +390,38 @@ body {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
+.input-wrapper-icon .input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  transition: color 0.25s;
+}
+
+.input-wrapper-icon input {
+  padding-left: 44px;
+  padding-right: 16px;
+  text-align: left;
+}
+
+.input-wrapper-icon input:focus+.input-icon,
+.input-wrapper-icon:focus-within .input-icon {
+  color: #10b981;
+}
+
+.input-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: right;
+}
+
 .btn-random {
   position: absolute;
   right: 6px;

@@ -164,6 +164,17 @@ function setupEventListeners() {
   document.getElementById("btn-history-trigger").addEventListener("click", () => openSheet("history"));
   document.getElementById("btn-reset-trigger").addEventListener("click", () => openModal("reset-confirm"));
 
+  // Edit-name button inside each score card (delegated: cards are re-rendered dynamically)
+  document.getElementById("scoreboard-grid").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-edit-inline");
+    if (!btn) return;
+    const card = btn.closest(".player-score-card");
+    if (!card) return;
+    const playerId = parseInt(card.getAttribute("data-player-id"), 10);
+    const player = state.players.find(p => p.id === playerId);
+    if (player) openEditNameModal(player.id, player.name);
+  });
+
   // Bottom Actions
   document.getElementById("btn-record-round").addEventListener("click", initRoundFlow);
   document.getElementById("btn-record-kill").addEventListener("click", initKillFlow);
@@ -191,6 +202,7 @@ function setupEventListeners() {
 
   // --- Edit Name Form Submit ---
   document.getElementById("edit-name-form").addEventListener("submit", handleEditNameSubmit);
+  document.getElementById("edit-player-name-input").addEventListener("input", updateEditNameCharCount);
 
   // --- Reset Confirmation ---
   document.getElementById("btn-confirm-reset").addEventListener("click", handleResetAll);
@@ -364,7 +376,7 @@ function renderScoreboard() {
           <div class="player-info">
             <div class="player-name-wrapper">
               <span class="player-name-text">${escapeHTML(player.name)}</span>
-              <button class="btn-edit-inline" onclick="openEditNameModal(${player.id}, '${escapeJS(player.name)}')" title="Sửa tên">
+              <button class="btn-edit-inline" title="Sửa tên">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
               </button>
             </div>
@@ -1175,6 +1187,14 @@ function formatTime(timestamp) {
 // ==========================================================================
 // EDIT NAME MODAL LOGIC
 // ==========================================================================
+function updateEditNameCharCount() {
+  const input = document.getElementById("edit-player-name-input");
+  const counter = document.getElementById("edit-name-char-count");
+  if (input && counter) {
+    counter.textContent = `${input.value.length}/${input.maxLength}`;
+  }
+}
+
 window.openEditNameModal = function (playerId, currentName) {
   const modal = document.getElementById("modal-edit-name");
   const idInput = document.getElementById("edit-player-id");
@@ -1182,6 +1202,7 @@ window.openEditNameModal = function (playerId, currentName) {
 
   idInput.value = playerId;
   nameInput.value = currentName;
+  updateEditNameCharCount();
 
   openModal("edit-name");
 
@@ -1219,10 +1240,11 @@ function handleEditNameSubmit(e) {
     // Update history strings as well if we want names in history to remain matching,
     // though that's optional. Let's do it for consistency!
     state.history.forEach(item => {
-      // Simple string replacement in details for oldName -> newName
-      // Use regex with boundaries to replace exact occurrences
+      // Replace oldName -> newName, but only whole-name occurrences: without the
+      // letter/number boundary check, renaming "An" would also corrupt "Anh".
       const escapedOld = oldName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      item.details = item.details.replace(new RegExp(escapedOld, 'g'), newName);
+      const boundaryRegex = new RegExp(`(?<![\\p{L}\\p{N}])${escapedOld}(?![\\p{L}\\p{N}])`, 'gu');
+      item.details = item.details.replace(boundaryRegex, newName);
     });
 
     saveState();
@@ -1291,7 +1313,7 @@ function closeAllModals() {
   });
 }
 
-// HTML & JS Escaping helpers to prevent XSS
+// HTML escaping helper to prevent XSS
 function escapeHTML(str) {
   return str.replace(/[&<>'"]/g,
     tag => ({
@@ -1302,10 +1324,6 @@ function escapeHTML(str) {
       '"': '&quot;'
     }[tag] || tag)
   );
-}
-
-function escapeJS(str) {
-  return str.replace(/'/g, "\\'");
 }
 
 // Expose functions to global scope for inline HTML event handlers

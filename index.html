@@ -12,7 +12,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="icons/logo.png">
+  <!-- PWA: manifest & icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/logo_pwa.png">
   <!-- Mobile Web App Capability -->
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0a0b10">
@@ -23,18 +28,27 @@
     <!-- SCREEN 1: WELCOME SCREEN (PLAYER INPUT) -->
     <section id="welcome-screen" class="screen active">
       <div class="welcome-header">
-        <div class="logo-container">
+        <!-- <div class="logo-container">
           <div class="cards-icon">
             <span class="card-spade">♠</span>
             <span class="card-heart">♥</span>
           </div>
         </div>
         <h1>Ghi Điểm</h1>
-        <p class="subtitle">Scorekeeper Premium</p>
+        <p class="subtitle">Scorekeeper Premium</p> -->
+        <div class="logo-container">
+          <div class="cards-icon">
+            <img src="icons/logo_text.png" alt="Scorekeeper Logo" class="logo-image" style="width: 100%;">
+          </div>
+        </div>
       </div>
 
       <div class="welcome-body">
-        <div class="card setup-card">
+        <div class="card setup-card" id="setup-card">
+          <div class="session-mode-tabs" id="session-mode-tabs">
+            <button type="button" class="btn-session-mode active" data-session-mode="local">📱 1 Máy</button>
+            <button type="button" class="btn-session-mode" data-session-mode="host">📡 Tạo Phòng</button>
+          </div>
           <h2>Nhập tên người chơi</h2>
           <form id="setup-form">
             <div class="input-group">
@@ -100,6 +114,20 @@
               </svg>
             </button>
           </form>
+          <button type="button" id="btn-goto-join" class="link-join-room">Đã có phòng? Vào phòng tại đây</button>
+        </div>
+
+        <div class="card join-room-card hidden" id="join-room-card">
+          <h2>Vào phòng đang chơi</h2>
+          <form id="join-room-form">
+            <div class="input-group">
+              <label for="join-room-code-input">Mã phòng</label>
+              <input type="text" id="join-room-code-input" class="room-code-input" maxlength="6" required
+                placeholder="VD: AB12CD" autocapitalize="characters" autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-primary btn-large btn-block">Tham gia</button>
+          </form>
+          <button type="button" id="btn-back-to-setup" class="link-join-room">Quay lại</button>
         </div>
       </div>
     </section>
@@ -130,6 +158,8 @@
           </button>
         </div>
       </header>
+
+      <div id="room-info-banner" class="room-info-banner hidden"></div>
 
       <main class="dashboard-body">
         <!-- Live scoreboard cards will be rendered dynamically here -->
@@ -495,6 +525,7 @@
                 <input type="text" id="edit-player-name-input" maxlength="15" required placeholder="Nhập tên mới...">
               </div>
               <span class="input-hint" id="edit-name-char-count">0/15</span>
+              <span class="field-error hidden" id="edit-name-error"></span>
             </div>
             <div class="modal-actions">
               <button type="button" class="btn btn-outline btn-close-modal">Hủy</button>
@@ -522,8 +553,47 @@
         </div>
       </div>
     </div>
+
+    <!-- MODAL: LEAVE ROOM CONFIRMATION -->
+    <div id="modal-leave-room-confirm" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Rời Phòng</h3>
+          <button class="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="reset-warning-text">Bạn có chắc muốn rời khỏi phòng này không? Bạn có thể vào lại bất cứ lúc nào
+            bằng mã phòng.</p>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline btn-close-modal">Ở lại</button>
+            <button id="btn-confirm-leave-room" class="btn btn-primary">Rời phòng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: GENERIC NOTICE (in-app replacement for window.alert) -->
+    <div id="modal-notice" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="notice-modal-title">Thông báo</h3>
+          <button class="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="reset-warning-text" id="notice-modal-message"></p>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-primary btn-close-modal" style="flex: 1;">Đã hiểu</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <!-- Firebase (compat build: keeps app.js as a plain global-scope script, no ES module refactor needed) -->
+  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 

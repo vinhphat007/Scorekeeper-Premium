@@ -14,10 +14,17 @@ const DEFAULT_STATE = {
   ],
   history: [],
   currentScreen: 'welcome',
-  scoreMode: '2/4'
+  scoreMode: '2/4',
+  session: { mode: 'local', roomCode: null } // mode: 'local' | 'host' | 'guest'
 };
 
 let state = { ...DEFAULT_STATE };
+
+// Which mode the setup form on the welcome screen will create when submitted
+let pendingSessionMode = 'local';
+
+// Unsubscribe handle for the current Firestore room listener, if any
+let unsubscribeRoom = null;
 
 // Pool of cool/fun Vietnamese names for random generation
 // const RANDOM_NAMES = [
@@ -85,14 +92,83 @@ document.addEventListener("DOMContentLoaded", () => {
   initApp();
 });
 
-function initApp() {
+async function initApp() {
   loadState();
   setupEventListeners();
+  registerServiceWorker();
   renderRoundScoreModeOptions();
+
+  // A shared invite link (?room=CODE) always takes priority over whatever
+  // was previously saved locally.
+  const joinedFromLink = await tryAutoJoinFromUrl();
+  if (!joinedFromLink && state.session.mode !== 'local' && state.session.roomCode) {
+    await reconnectSession();
+  }
+
+  applySessionModeUI();
   renderScreen();
   if (state.currentScreen === 'dashboard') {
     renderScoreboard();
     renderHistory();
+  }
+}
+
+// Re-attach to a previously joined/hosted room after a page reload
+async function reconnectSession() {
+  try {
+    await ensureAnonymousAuth();
+    attachRoomListener(state.session.roomCode);
+  } catch (err) {
+    console.error("Không thể kết nối lại phòng:", err);
+  }
+}
+
+// If the URL carries a ?room=CODE invite link, join that room immediately
+// (skips the manual "Vào phòng" form). Returns true if it handled a join.
+async function tryAutoJoinFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const codeFromUrl = params.get("room");
+  if (!codeFromUrl) return false;
+
+  const code = codeFromUrl.trim().toUpperCase();
+
+  // Strip ?room=... from the address bar so a later refresh doesn't re-trigger this.
+  window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+
+  if (state.session.mode !== 'local' && state.session.roomCode === code) {
+    // Already in this exact room (e.g. host re-opening their own invite link).
+    return true;
+  }
+
+  try {
+    const roomData = await joinRoom(code);
+    state.players = roomData.players;
+    state.history = roomData.history || [];
+    state.scoreMode = roomData.scoreMode || DEFAULT_STATE.scoreMode;
+    state.session = { mode: 'guest', roomCode: code };
+    state.currentScreen = 'dashboard';
+
+    saveState();
+    attachRoomListener(code);
+    return true;
+  } catch (err) {
+    if (err.message === 'ROOM_NOT_FOUND') {
+      showNotice("Link mời không hợp lệ hoặc phòng đã đóng.");
+    } else {
+      console.error("Không thể vào phòng từ link mời:", err);
+      showNotice("Không thể kết nối. Kiểm tra mạng và thử lại.");
+    }
+    return false;
+  }
+}
+
+// Register the PWA service worker (no-op on browsers/contexts that don't support it,
+// e.g. when opened directly via file:// instead of served over http(s)).
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch((err) => {
+      console.error("Service worker registration failed:", err);
+    });
   }
 }
 
@@ -109,6 +185,7 @@ function loadState() {
       if (!state.history) state.history = [];
       if (!state.currentScreen) state.currentScreen = 'welcome';
       if (!state.scoreMode) state.scoreMode = DEFAULT_STATE.scoreMode;
+      if (!state.session) state.session = { mode: 'local', roomCode: null };
     } catch (e) {
       console.error("Error parsing saved state:", e);
       state = { ...DEFAULT_STATE };
@@ -118,9 +195,24 @@ function loadState() {
   }
 }
 
-// Save state to LocalStorage
+// Save state to LocalStorage, and push to Firestore too when hosting a shared room
 function saveState() {
   localStorage.setItem("tienlen_scorekeeper_data", JSON.stringify(state));
+  syncRoomIfHost();
+}
+
+// Push current scores/history up to Firestore so guests see live updates.
+// No-op unless this device is the host of an active shared room.
+function syncRoomIfHost() {
+  if (state.session.mode !== 'host' || !state.session.roomCode) return;
+  db.collection("rooms").doc(state.session.roomCode).set({
+    players: state.players,
+    history: state.history,
+    scoreMode: state.scoreMode,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch((err) => {
+    console.error("Đồng bộ phòng thất bại:", err);
+  });
 }
 
 // Screen controller
@@ -150,6 +242,27 @@ function setupEventListeners() {
   if (setupForm) {
     setupForm.addEventListener("submit", handleStartGame);
   }
+
+  // --- Session mode tabs: "1 Máy" (local) vs "Tạo Phòng" (host, shared via Firestore) ---
+  document.querySelectorAll(".btn-session-mode").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      pendingSessionMode = e.currentTarget.getAttribute("data-session-mode");
+      document.querySelectorAll(".btn-session-mode").forEach(b => {
+        b.classList.toggle("active", b === e.currentTarget);
+      });
+    });
+  });
+
+  // --- Switch between "create/local" setup card and "join room" card ---
+  document.getElementById("btn-goto-join").addEventListener("click", () => {
+    document.getElementById("setup-card").classList.add("hidden");
+    document.getElementById("join-room-card").classList.remove("hidden");
+  });
+  document.getElementById("btn-back-to-setup").addEventListener("click", () => {
+    document.getElementById("join-room-card").classList.add("hidden");
+    document.getElementById("setup-card").classList.remove("hidden");
+  });
+  document.getElementById("join-room-form").addEventListener("submit", handleJoinRoom);
 
   // Randomize names buttons
   document.querySelectorAll(".btn-random").forEach(btn => {
@@ -206,6 +319,12 @@ function setupEventListeners() {
 
   // --- Reset Confirmation ---
   document.getElementById("btn-confirm-reset").addEventListener("click", handleResetAll);
+
+  // --- Leave Room Confirmation ---
+  document.getElementById("btn-confirm-leave-room").addEventListener("click", () => {
+    closeAllModals();
+    handleResetAll();
+  });
 
   // --- Round Flow Event Handlers ---
   document.getElementById("btn-restart-round").addEventListener("click", () => startRoundStep(1));
@@ -296,33 +415,228 @@ function handleStartGame(e) {
 
   // Simple validation
   if (!p1 || !p2 || !p3 || !p4) {
-    alert("Vui lòng điền đầy đủ tên cho 4 người chơi!");
+    showNotice("Vui lòng điền đầy đủ tên cho 4 người chơi!");
     return;
   }
 
   const names = [p1, p2, p3, p4];
   const uniqueNames = new Set(names);
   if (uniqueNames.size !== 4) {
-    alert("Tên người chơi không được trùng nhau!");
+    showNotice("Tên người chơi không được trùng nhau!");
     return;
   }
 
   const selectedMode = document.getElementById("setup-score-mode").value || '2/4';
 
-  // Setup state
-  state.players = [
+  const players = [
     { id: 1, name: p1, score: 0 },
     { id: 2, name: p2, score: 0 },
     { id: 3, name: p3, score: 0 },
     { id: 4, name: p4, score: 0 }
   ];
+
+  if (pendingSessionMode === 'host') {
+    startHostedGame(players, selectedMode, e.target.querySelector("#btn-start"));
+    return;
+  }
+
+  // Local (single-device, offline) mode — unchanged from before
+  state.players = players;
   state.history = [];
   state.scoreMode = selectedMode;
+  state.session = { mode: 'local', roomCode: null };
 
   saveState();
   renderScoreboard();
   renderHistory();
   showScreen("dashboard");
+}
+
+async function startHostedGame(players, scoreMode, submitBtn) {
+  if (submitBtn) submitBtn.disabled = true;
+  try {
+    const roomCode = await createRoom(players, scoreMode);
+    state.players = players;
+    state.history = [];
+    state.scoreMode = scoreMode;
+    state.session = { mode: 'host', roomCode };
+
+    saveState();
+    attachRoomListener(roomCode);
+    applySessionModeUI();
+    renderScoreboard();
+    renderHistory();
+    showScreen("dashboard");
+  } catch (err) {
+    console.error("Không thể tạo phòng:", err);
+    showNotice("Không thể tạo phòng. Kiểm tra kết nối mạng rồi thử lại.");
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+async function handleJoinRoom(e) {
+  e.preventDefault();
+  const codeInput = document.getElementById("join-room-code-input");
+  const code = codeInput.value.trim().toUpperCase();
+  if (!code) return;
+
+  const submitBtn = e.target.querySelector("button[type=submit]");
+  submitBtn.disabled = true;
+  try {
+    const roomData = await joinRoom(code);
+    state.players = roomData.players;
+    state.history = roomData.history || [];
+    state.scoreMode = roomData.scoreMode || DEFAULT_STATE.scoreMode;
+    state.session = { mode: 'guest', roomCode: code };
+
+    saveState();
+    attachRoomListener(code);
+    applySessionModeUI();
+    renderScoreboard();
+    renderHistory();
+    showScreen("dashboard");
+  } catch (err) {
+    if (err.message === 'ROOM_NOT_FOUND') {
+      showNotice("Không tìm thấy phòng với mã này. Kiểm tra lại mã phòng!");
+    } else {
+      console.error("Không thể vào phòng:", err);
+      showNotice("Không thể kết nối. Kiểm tra mạng và thử lại.");
+    }
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+// ==========================================================================
+// SHARED ROOM: FIRESTORE SYNC (GIAI ĐOẠN 1)
+// ==========================================================================
+function generateRoomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O or 1/I, easy to read aloud
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+function ensureAnonymousAuth() {
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+  return auth.signInAnonymously().then(cred => cred.user);
+}
+
+async function createRoom(players, scoreMode) {
+  const user = await ensureAnonymousAuth();
+
+  let code;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    code = generateRoomCode();
+    const existing = await db.collection("rooms").doc(code).get();
+    if (!existing.exists) break;
+  }
+
+  await db.collection("rooms").doc(code).set({
+    hostUid: user.uid,
+    scoreMode: scoreMode,
+    players: players,
+    history: [],
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  return code;
+}
+
+async function joinRoom(code) {
+  await ensureAnonymousAuth();
+  const snap = await db.collection("rooms").doc(code).get();
+  if (!snap.exists) {
+    throw new Error("ROOM_NOT_FOUND");
+  }
+  return snap.data();
+}
+
+function attachRoomListener(roomCode) {
+  if (unsubscribeRoom) unsubscribeRoom();
+  unsubscribeRoom = db.collection("rooms").doc(roomCode).onSnapshot((snap) => {
+    if (!snap.exists) {
+      // The host closed/deleted the room (e.g. via "Cài đặt lại") — everyone
+      // still connected (guests, or this host reconnecting elsewhere) gets kicked out.
+      if (state.session.mode !== 'local') {
+        handleRoomClosed();
+      }
+      return;
+    }
+    const data = snap.data();
+    state.players = data.players;
+    state.history = data.history || [];
+    state.scoreMode = data.scoreMode || state.scoreMode;
+    localStorage.setItem("tienlen_scorekeeper_data", JSON.stringify(state));
+    renderScoreboard();
+    renderHistory();
+  }, (err) => {
+    console.error("Mất kết nối tới phòng:", err);
+  });
+}
+
+// Lets a guest voluntarily leave a shared room (the room itself keeps running
+// for everyone else — only the host closing it via "Xóa toàn bộ" ends it).
+function handleLeaveRoom() {
+  openModal("leave-room-confirm");
+}
+
+// Called on every device still connected to a room right after it disappears
+// from Firestore. Boots the user back to the welcome screen.
+function handleRoomClosed() {
+  if (unsubscribeRoom) {
+    unsubscribeRoom();
+    unsubscribeRoom = null;
+  }
+  // Reset first (it also runs closeAllModals()), then show the notice on top
+  // of the fresh welcome screen — otherwise the reset would instantly close
+  // the notice we're about to show.
+  handleResetAll();
+  showNotice("Phòng đã được chủ phòng đóng. Bạn sẽ được đưa về màn hình chính.");
+}
+
+// Show/hide guest-only vs host-only UI, and render the room-code banner
+function applySessionModeUI() {
+  const appEl = document.getElementById("app");
+  appEl.classList.toggle("guest-mode", state.session.mode === 'guest');
+  renderRoomInfoBanner();
+}
+
+function renderRoomInfoBanner() {
+  const banner = document.getElementById("room-info-banner");
+  if (!banner) return;
+
+  if (state.session.mode === 'host') {
+    banner.classList.remove("hidden");
+    banner.innerHTML = `
+      <span class="room-info-text">Mã phòng: <strong>${escapeHTML(state.session.roomCode)}</strong></span>
+      <button type="button" id="btn-copy-room-code" class="btn-copy-code">Sao chép mã phòng</button>
+    `;
+    const copyBtn = document.getElementById("btn-copy-room-code");
+    copyBtn.addEventListener("click", () => {
+      const code = state.session.roomCode;
+      navigator.clipboard.writeText(code).then(() => {
+        const original = copyBtn.textContent;
+        copyBtn.textContent = "✓ Đã sao chép!";
+        setTimeout(() => { copyBtn.textContent = original; }, 1500);
+      }).catch(() => {
+        showNotice("Không thể tự sao chép. Mã phòng của bạn: " + code);
+      });
+    });
+  } else if (state.session.mode === 'guest') {
+    banner.classList.remove("hidden");
+    banner.innerHTML = `
+      <span class="room-info-text">🔴 Đang xem trực tiếp · Phòng <strong>${escapeHTML(state.session.roomCode)}</strong></span>
+      <button type="button" id="btn-leave-room" class="btn-copy-code">Rời phòng</button>
+    `;
+    document.getElementById("btn-leave-room").addEventListener("click", handleLeaveRoom);
+  } else {
+    banner.classList.add("hidden");
+    banner.innerHTML = "";
+  }
 }
 
 // ==========================================================================
@@ -1167,8 +1481,8 @@ function handleUndo() {
   renderScoreboard();
   renderHistory();
 
-  // Tiny alert notice on top of dashboard or history
-  alert(`Đã thu hồi lượt: "${itemToUndo.details}"`);
+  // Tiny notice on top of dashboard or history
+  showNotice(`Đã thu hồi lượt: "${itemToUndo.details}"`, "Hoàn tác thành công");
 
   // Close sheet if history is now empty
   if (state.history.length === 0) {
@@ -1193,6 +1507,17 @@ function updateEditNameCharCount() {
   if (input && counter) {
     counter.textContent = `${input.value.length}/${input.maxLength}`;
   }
+  hideEditNameError();
+}
+
+function showEditNameError(message) {
+  const errorEl = document.getElementById("edit-name-error");
+  errorEl.textContent = message;
+  errorEl.classList.remove("hidden");
+}
+
+function hideEditNameError() {
+  document.getElementById("edit-name-error").classList.add("hidden");
 }
 
 window.openEditNameModal = function (playerId, currentName) {
@@ -1203,6 +1528,7 @@ window.openEditNameModal = function (playerId, currentName) {
   idInput.value = playerId;
   nameInput.value = currentName;
   updateEditNameCharCount();
+  hideEditNameError();
 
   openModal("edit-name");
 
@@ -1220,14 +1546,14 @@ function handleEditNameSubmit(e) {
   const newName = document.getElementById("edit-player-name-input").value.trim();
 
   if (!newName) {
-    alert("Tên người chơi không được bỏ trống!");
+    showEditNameError("Tên người chơi không được bỏ trống!");
     return;
   }
 
   // Validate duplicate
   const exists = state.players.some(p => p.id !== id && p.name.toLowerCase() === newName.toLowerCase());
   if (exists) {
-    alert("Tên này đã được sử dụng bởi người chơi khác!");
+    showEditNameError("Tên này đã được sử dụng bởi người chơi khác!");
     return;
   }
 
@@ -1258,6 +1584,19 @@ function handleEditNameSubmit(e) {
 // RESET GAME LOGIC
 // ==========================================================================
 function handleResetAll() {
+  // Closing the room here (not just leaving it) is what boots any connected
+  // guests out via attachRoomListener's "!snap.exists" branch.
+  if (state.session.mode === 'host' && state.session.roomCode) {
+    db.collection("rooms").doc(state.session.roomCode).delete().catch((err) => {
+      console.error("Không thể đóng phòng trên server:", err);
+    });
+  }
+
+  if (unsubscribeRoom) {
+    unsubscribeRoom();
+    unsubscribeRoom = null;
+  }
+
   localStorage.removeItem("tienlen_scorekeeper_data");
   state = {
     players: [
@@ -1268,7 +1607,8 @@ function handleResetAll() {
     ],
     history: [],
     currentScreen: 'welcome',
-    scoreMode: DEFAULT_STATE.scoreMode
+    scoreMode: DEFAULT_STATE.scoreMode,
+    session: { mode: 'local', roomCode: null }
   };
 
   // Clear setup inputs to defaults
@@ -1276,9 +1616,18 @@ function handleResetAll() {
     document.getElementById(`player-${i}-input`).value = `Người chơi ${i}`;
   }
 
+  // Reset welcome-screen mode selection back to "1 Máy" / setup card
+  pendingSessionMode = 'local';
+  document.querySelectorAll(".btn-session-mode").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-session-mode") === 'local');
+  });
+  document.getElementById("join-room-card").classList.add("hidden");
+  document.getElementById("setup-card").classList.remove("hidden");
+
   closeAllModals();
   closeAllSheets();
   renderRoundScoreModeOptions();
+  applySessionModeUI();
   saveState();
   showScreen("welcome");
 }
@@ -1311,6 +1660,13 @@ function closeAllModals() {
   document.querySelectorAll(".modal-overlay").forEach(modal => {
     modal.classList.remove("active");
   });
+}
+
+// In-app replacement for window.alert(): a single-button notice modal
+function showNotice(message, title) {
+  document.getElementById("notice-modal-title").textContent = title || "Thông báo";
+  document.getElementById("notice-modal-message").textContent = message;
+  openModal("notice");
 }
 
 // HTML escaping helper to prevent XSS

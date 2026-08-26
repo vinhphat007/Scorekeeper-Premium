@@ -1,0 +1,23 @@
+{
+  "name": "Scorekeeper - Tính Điểm Bỏ Túi",
+  "short_name": "Ghi Điểm",
+  "description": "Ứng dụng ghi điểm bài Tiến Lên cho 4 người chơi",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0b10",
+  "theme_color": "#0a0b10",
+  "icons": [
+    {
+      "src": "icons/logo_pwa.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/logo_pwa.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

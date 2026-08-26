@@ -275,7 +275,7 @@ function setupEventListeners() {
   // --- Screen 2: Dashboard Screen ---
   // Header Actions
   document.getElementById("btn-history-trigger").addEventListener("click", () => openSheet("history"));
-  document.getElementById("btn-reset-trigger").addEventListener("click", () => openModal("reset-confirm"));
+  document.getElementById("btn-reset-trigger").addEventListener("click", openResetModal);
 
   // Edit-name button inside each score card (delegated: cards are re-rendered dynamically)
   document.getElementById("scoreboard-grid").addEventListener("click", (e) => {
@@ -319,6 +319,8 @@ function setupEventListeners() {
 
   // --- Reset Confirmation ---
   document.getElementById("btn-confirm-reset").addEventListener("click", handleResetAll);
+  document.getElementById("btn-confirm-clear-history").addEventListener("click", handleClearHistory);
+  document.getElementById("btn-confirm-close-room").addEventListener("click", handleResetAll);
 
   // --- Leave Room Confirmation ---
   document.getElementById("btn-confirm-leave-room").addEventListener("click", () => {
@@ -1583,6 +1585,30 @@ function handleEditNameSubmit(e) {
 // ==========================================================================
 // RESET GAME LOGIC
 // ==========================================================================
+// Opens the reset modal, showing the host-only 2-choice variant (clear
+// history vs. close the room) instead of the single local "wipe everything"
+// button when this device is hosting a shared room.
+function openResetModal() {
+  const isHost = state.session.mode === 'host';
+  document.getElementById("reset-modal-local-text").classList.toggle("hidden", isHost);
+  document.getElementById("reset-modal-local-actions").classList.toggle("hidden", isHost);
+  document.getElementById("reset-modal-host-text").classList.toggle("hidden", !isHost);
+  document.getElementById("reset-modal-host-actions").classList.toggle("hidden", !isHost);
+  openModal("reset-confirm");
+}
+
+// Host-only: reset scores/history to zero but keep the room, players and
+// connected guests as-is (guests see the reset live via saveState's sync).
+function handleClearHistory() {
+  state.players.forEach(p => { p.score = 0; });
+  state.history = [];
+  saveState();
+  closeAllModals();
+  renderScoreboard();
+  renderHistory();
+  showNotice("Đã xóa lịch sử ghi nhận. Điểm số đã về 0.");
+}
+
 function handleResetAll() {
   // Closing the room here (not just leaving it) is what boots any connected
   // guests out via attachRoomListener's "!snap.exists" branch.

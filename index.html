@@ -544,11 +544,21 @@
           <button class="btn-close-modal">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="reset-warning-text">Hành động này sẽ xóa toàn bộ điểm số, lịch sử ván đấu và danh sách người chơi
-            hiện tại. Bạn có chắc chắn muốn làm mới?</p>
-          <div class="modal-actions">
+          <!-- Local (single-device) mode: one destructive action -->
+          <p class="reset-warning-text" id="reset-modal-local-text">Hành động này sẽ xóa toàn bộ điểm số, lịch sử ván
+            đấu và danh sách người chơi hiện tại. Bạn có chắc chắn muốn làm mới?</p>
+          <div class="modal-actions" id="reset-modal-local-actions">
             <button type="button" class="btn btn-outline btn-close-modal">Hủy bỏ</button>
             <button id="btn-confirm-reset" class="btn btn-danger">Xóa toàn bộ</button>
+          </div>
+
+          <!-- Host (shared room) mode: separate "reset scores" from "close room" -->
+          <p class="reset-warning-text hidden" id="reset-modal-host-text">"Xóa lịch sử ghi nhận" chỉ đưa điểm về 0 và
+            giữ nguyên phòng đang chơi. "Xóa phòng" sẽ kết thúc phòng, đưa mọi người về màn hình chính.</p>
+          <div class="modal-actions modal-actions-column hidden" id="reset-modal-host-actions">
+            <button id="btn-confirm-clear-history" class="btn btn-warning btn-block">Xóa lịch sử ghi nhận</button>
+            <button id="btn-confirm-close-room" class="btn btn-danger btn-block">Xóa phòng (Kết thúc)</button>
+            <button type="button" class="btn btn-outline btn-block btn-close-modal">Hủy bỏ</button>
           </div>
         </div>
       </div>

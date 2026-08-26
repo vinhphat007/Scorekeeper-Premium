@@ -1561,6 +1561,10 @@ body {
   margin-top: 10px;
 }
 
+.modal-actions-column {
+  flex-direction: column;
+}
+
 .modal-actions .btn {
   flex: 1;
   padding: 12px 16px;

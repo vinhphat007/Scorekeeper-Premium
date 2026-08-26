@@ -319,13 +319,29 @@ function setupEventListeners() {
 
   // --- Reset Confirmation ---
   document.getElementById("btn-confirm-reset").addEventListener("click", handleResetAll);
-  document.getElementById("btn-confirm-clear-history").addEventListener("click", handleClearHistory);
-  document.getElementById("btn-confirm-close-room").addEventListener("click", handleResetAll);
-
-  // --- Leave Room Confirmation ---
-  document.getElementById("btn-confirm-leave-room").addEventListener("click", () => {
+  document.getElementById("btn-confirm-clear-history").addEventListener("click", () => {
     closeAllModals();
-    handleResetAll();
+    showConfirm(
+      "Bạn có chắc muốn xóa lịch sử ghi nhận? Điểm của tất cả người chơi sẽ về 0, nhưng phòng vẫn tiếp tục.",
+      handleClearHistory,
+      { title: "Xóa Lịch Sử Ghi Nhận", confirmLabel: "Xóa lịch sử" }
+    );
+  });
+  document.getElementById("btn-confirm-close-room").addEventListener("click", () => {
+    closeAllModals();
+    showConfirm(
+      "Bạn có chắc muốn xóa phòng? Phòng sẽ kết thúc và mọi người sẽ bị đưa về màn hình chính.",
+      handleResetAll,
+      { title: "Xóa Phòng", confirmLabel: "Xóa phòng" }
+    );
+  });
+
+  // --- Generic Confirm Modal ---
+  document.getElementById("btn-confirm-generic").addEventListener("click", () => {
+    const action = pendingConfirmAction;
+    pendingConfirmAction = null;
+    closeAllModals();
+    if (action) action();
   });
 
   // --- Round Flow Event Handlers ---
@@ -374,7 +390,7 @@ function setupEventListeners() {
   document.getElementById("btn-confirm-toitrang").addEventListener("click", handleSaveToitrang);
 
   // --- Undo Button ---
-  document.getElementById("btn-undo").addEventListener("click", handleUndo);
+  document.getElementById("btn-undo").addEventListener("click", confirmUndo);
 }
 
 // ==========================================================================
@@ -583,7 +599,11 @@ function attachRoomListener(roomCode) {
 // Lets a guest voluntarily leave a shared room (the room itself keeps running
 // for everyone else — only the host closing it via "Xóa toàn bộ" ends it).
 function handleLeaveRoom() {
-  openModal("leave-room-confirm");
+  showConfirm(
+    "Bạn có chắc muốn rời khỏi phòng này không? Bạn có thể vào lại bất cứ lúc nào bằng mã phòng.",
+    handleResetAll,
+    { title: "Rời Phòng", confirmLabel: "Rời phòng", cancelLabel: "Ở lại", danger: false }
+  );
 }
 
 // Called on every device still connected to a room right after it disappears
@@ -1466,6 +1486,16 @@ function renderHistory() {
   });
 }
 
+function confirmUndo() {
+  if (state.history.length === 0) return;
+  const lastItem = state.history[state.history.length - 1];
+  showConfirm(
+    `Thu hồi lượt gần nhất: "${lastItem.details}"?`,
+    handleUndo,
+    { title: "Thu Hồi Lượt", confirmLabel: "Thu hồi" }
+  );
+}
+
 function handleUndo() {
   if (state.history.length === 0) return;
 
@@ -1693,6 +1723,23 @@ function showNotice(message, title) {
   document.getElementById("notice-modal-title").textContent = title || "Thông báo";
   document.getElementById("notice-modal-message").textContent = message;
   openModal("notice");
+}
+
+// In-app replacement for window.confirm(): runs onConfirm only if the user
+// picks the confirm button. Cancelling (X, backdrop, or the cancel button)
+// just closes the dialog — no callback is called.
+let pendingConfirmAction = null;
+function showConfirm(message, onConfirm, options = {}) {
+  document.getElementById("confirm-modal-title").textContent = options.title || "Xác nhận";
+  document.getElementById("confirm-modal-message").textContent = message;
+  document.getElementById("confirm-modal-cancel").textContent = options.cancelLabel || "Hủy bỏ";
+
+  const confirmBtn = document.getElementById("btn-confirm-generic");
+  confirmBtn.textContent = options.confirmLabel || "Xác nhận";
+  confirmBtn.className = "btn " + (options.danger === false ? "btn-primary" : "btn-danger");
+
+  pendingConfirmAction = onConfirm;
+  openModal("confirm");
 }
 
 // HTML escaping helper to prevent XSS

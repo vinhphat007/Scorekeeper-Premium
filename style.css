@@ -555,7 +555,8 @@ body {
 #app.guest-mode .app-footer,
 #app.guest-mode #btn-reset-trigger,
 #app.guest-mode .btn-edit-inline,
-#app.guest-mode .btn-adjust {
+#app.guest-mode .btn-adjust,
+#app.guest-mode #btn-undo {
   display: none !important;
 }
 

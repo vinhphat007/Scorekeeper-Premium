@@ -564,19 +564,18 @@
       </div>
     </div>
 
-    <!-- MODAL: LEAVE ROOM CONFIRMATION -->
-    <div id="modal-leave-room-confirm" class="modal-overlay">
+    <!-- MODAL: GENERIC CONFIRM (Yes/No) — used for leave room, undo, clear history, close room -->
+    <div id="modal-confirm" class="modal-overlay">
       <div class="modal">
         <div class="modal-header">
-          <h3>Rời Phòng</h3>
+          <h3 id="confirm-modal-title">Xác nhận</h3>
           <button class="btn-close-modal">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="reset-warning-text">Bạn có chắc muốn rời khỏi phòng này không? Bạn có thể vào lại bất cứ lúc nào
-            bằng mã phòng.</p>
+          <p class="reset-warning-text" id="confirm-modal-message"></p>
           <div class="modal-actions">
-            <button type="button" class="btn btn-outline btn-close-modal">Ở lại</button>
-            <button id="btn-confirm-leave-room" class="btn btn-primary">Rời phòng</button>
+            <button type="button" class="btn btn-outline btn-close-modal" id="confirm-modal-cancel">Hủy bỏ</button>
+            <button type="button" id="btn-confirm-generic" class="btn btn-danger">Xác nhận</button>
           </div>
         </div>
       </div>

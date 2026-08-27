@@ -10,12 +10,12 @@
   "theme_color": "#0a0b10",
   "icons": [
     {
-      "src": "icons/logo_pwa.png",
+      "src": "icons/logo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icons/logo_pwa.png",
+      "src": "icons/logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }

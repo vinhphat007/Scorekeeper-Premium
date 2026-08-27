@@ -1,4 +1,4 @@
-const CACHE_NAME = "scorekeeper-v3";
+const CACHE_NAME = "scorekeeper-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,8 +6,7 @@ const APP_SHELL = [
   "./app.js",
   "./firebase-config.js",
   "./manifest.json",
-  "./icons/logo.png",
-  "./icons/logo_pwa.png"
+  "./icons/logo.png"
 ];
 
 self.addEventListener("install", (event) => {

@@ -14,17 +14,10 @@ const DEFAULT_STATE = {
   ],
   history: [],
   currentScreen: 'welcome',
-  scoreMode: '2/4',
-  session: { mode: 'local', roomCode: null } // mode: 'local' | 'host' | 'guest'
+  scoreMode: '2/4'
 };
 
 let state = { ...DEFAULT_STATE };
-
-// Which mode the setup form on the welcome screen will create when submitted
-let pendingSessionMode = 'local';
-
-// Unsubscribe handle for the current Firestore room listener, if any
-let unsubscribeRoom = null;
 
 // Pool of cool/fun Vietnamese names for random generation
 // const RANDOM_NAMES = [
@@ -34,7 +27,7 @@ let unsubscribeRoom = null;
 // ];
 
 const RANDOM_NAMES = [
-  "Hùng", "Phát", "Vương", "Tuấn", "Ngân" 
+  "Hùng", "Phát", "Vương", "Tuấn", "Ngân"
 ];
 
 // Active state variables for bottom sheets
@@ -92,73 +85,15 @@ document.addEventListener("DOMContentLoaded", () => {
   initApp();
 });
 
-async function initApp() {
+function initApp() {
   loadState();
   setupEventListeners();
   registerServiceWorker();
   renderRoundScoreModeOptions();
-
-  // A shared invite link (?room=CODE) always takes priority over whatever
-  // was previously saved locally.
-  const joinedFromLink = await tryAutoJoinFromUrl();
-  if (!joinedFromLink && state.session.mode !== 'local' && state.session.roomCode) {
-    await reconnectSession();
-  }
-
-  applySessionModeUI();
   renderScreen();
   if (state.currentScreen === 'dashboard') {
     renderScoreboard();
     renderHistory();
-  }
-}
-
-// Re-attach to a previously joined/hosted room after a page reload
-async function reconnectSession() {
-  try {
-    await ensureAnonymousAuth();
-    attachRoomListener(state.session.roomCode);
-  } catch (err) {
-    console.error("Không thể kết nối lại phòng:", err);
-  }
-}
-
-// If the URL carries a ?room=CODE invite link, join that room immediately
-// (skips the manual "Vào phòng" form). Returns true if it handled a join.
-async function tryAutoJoinFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const codeFromUrl = params.get("room");
-  if (!codeFromUrl) return false;
-
-  const code = codeFromUrl.trim().toUpperCase();
-
-  // Strip ?room=... from the address bar so a later refresh doesn't re-trigger this.
-  window.history.replaceState({}, "", window.location.pathname + window.location.hash);
-
-  if (state.session.mode !== 'local' && state.session.roomCode === code) {
-    // Already in this exact room (e.g. host re-opening their own invite link).
-    return true;
-  }
-
-  try {
-    const roomData = await joinRoom(code);
-    state.players = roomData.players;
-    state.history = roomData.history || [];
-    state.scoreMode = roomData.scoreMode || DEFAULT_STATE.scoreMode;
-    state.session = { mode: 'guest', roomCode: code };
-    state.currentScreen = 'dashboard';
-
-    saveState();
-    attachRoomListener(code);
-    return true;
-  } catch (err) {
-    if (err.message === 'ROOM_NOT_FOUND') {
-      showNotice("Link mời không hợp lệ hoặc phòng đã đóng.");
-    } else {
-      console.error("Không thể vào phòng từ link mời:", err);
-      showNotice("Không thể kết nối. Kiểm tra mạng và thử lại.");
-    }
-    return false;
   }
 }
 
@@ -185,7 +120,6 @@ function loadState() {
       if (!state.history) state.history = [];
       if (!state.currentScreen) state.currentScreen = 'welcome';
       if (!state.scoreMode) state.scoreMode = DEFAULT_STATE.scoreMode;
-      if (!state.session) state.session = { mode: 'local', roomCode: null };
     } catch (e) {
       console.error("Error parsing saved state:", e);
       state = { ...DEFAULT_STATE };
@@ -195,24 +129,9 @@ function loadState() {
   }
 }
 
-// Save state to LocalStorage, and push to Firestore too when hosting a shared room
+// Save state to LocalStorage
 function saveState() {
   localStorage.setItem("tienlen_scorekeeper_data", JSON.stringify(state));
-  syncRoomIfHost();
-}
-
-// Push current scores/history up to Firestore so guests see live updates.
-// No-op unless this device is the host of an active shared room.
-function syncRoomIfHost() {
-  if (state.session.mode !== 'host' || !state.session.roomCode) return;
-  db.collection("rooms").doc(state.session.roomCode).set({
-    players: state.players,
-    history: state.history,
-    scoreMode: state.scoreMode,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true }).catch((err) => {
-    console.error("Đồng bộ phòng thất bại:", err);
-  });
 }
 
 // Screen controller
@@ -243,27 +162,6 @@ function setupEventListeners() {
     setupForm.addEventListener("submit", handleStartGame);
   }
 
-  // --- Session mode tabs: "1 Máy" (local) vs "Tạo Phòng" (host, shared via Firestore) ---
-  document.querySelectorAll(".btn-session-mode").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      pendingSessionMode = e.currentTarget.getAttribute("data-session-mode");
-      document.querySelectorAll(".btn-session-mode").forEach(b => {
-        b.classList.toggle("active", b === e.currentTarget);
-      });
-    });
-  });
-
-  // --- Switch between "create/local" setup card and "join room" card ---
-  document.getElementById("btn-goto-join").addEventListener("click", () => {
-    document.getElementById("setup-card").classList.add("hidden");
-    document.getElementById("join-room-card").classList.remove("hidden");
-  });
-  document.getElementById("btn-back-to-setup").addEventListener("click", () => {
-    document.getElementById("join-room-card").classList.add("hidden");
-    document.getElementById("setup-card").classList.remove("hidden");
-  });
-  document.getElementById("join-room-form").addEventListener("submit", handleJoinRoom);
-
   // Randomize names buttons
   document.querySelectorAll(".btn-random").forEach(btn => {
     btn.addEventListener("click", (e) => {
@@ -275,7 +173,7 @@ function setupEventListeners() {
   // --- Screen 2: Dashboard Screen ---
   // Header Actions
   document.getElementById("btn-history-trigger").addEventListener("click", () => openSheet("history"));
-  document.getElementById("btn-reset-trigger").addEventListener("click", openResetModal);
+  document.getElementById("btn-reset-trigger").addEventListener("click", () => openModal("reset-confirm"));
 
   // Edit-name button inside each score card (delegated: cards are re-rendered dynamically)
   document.getElementById("scoreboard-grid").addEventListener("click", (e) => {
@@ -319,22 +217,6 @@ function setupEventListeners() {
 
   // --- Reset Confirmation ---
   document.getElementById("btn-confirm-reset").addEventListener("click", handleResetAll);
-  document.getElementById("btn-confirm-clear-history").addEventListener("click", () => {
-    closeAllModals();
-    showConfirm(
-      "Bạn có chắc muốn xóa lịch sử ghi nhận? Điểm của tất cả người chơi sẽ về 0, nhưng phòng vẫn tiếp tục.",
-      handleClearHistory,
-      { title: "Xóa Lịch Sử Ghi Nhận", confirmLabel: "Xóa lịch sử" }
-    );
-  });
-  document.getElementById("btn-confirm-close-room").addEventListener("click", () => {
-    closeAllModals();
-    showConfirm(
-      "Bạn có chắc muốn xóa phòng? Phòng sẽ kết thúc và mọi người sẽ bị đưa về màn hình chính.",
-      handleResetAll,
-      { title: "Xóa Phòng", confirmLabel: "Xóa phòng" }
-    );
-  });
 
   // --- Generic Confirm Modal ---
   document.getElementById("btn-confirm-generic").addEventListener("click", () => {
@@ -446,219 +328,20 @@ function handleStartGame(e) {
 
   const selectedMode = document.getElementById("setup-score-mode").value || '2/4';
 
-  const players = [
+  // Setup state
+  state.players = [
     { id: 1, name: p1, score: 0 },
     { id: 2, name: p2, score: 0 },
     { id: 3, name: p3, score: 0 },
     { id: 4, name: p4, score: 0 }
   ];
-
-  if (pendingSessionMode === 'host') {
-    startHostedGame(players, selectedMode, e.target.querySelector("#btn-start"));
-    return;
-  }
-
-  // Local (single-device, offline) mode — unchanged from before
-  state.players = players;
   state.history = [];
   state.scoreMode = selectedMode;
-  state.session = { mode: 'local', roomCode: null };
 
   saveState();
   renderScoreboard();
   renderHistory();
   showScreen("dashboard");
-}
-
-async function startHostedGame(players, scoreMode, submitBtn) {
-  if (submitBtn) submitBtn.disabled = true;
-  try {
-    const roomCode = await createRoom(players, scoreMode);
-    state.players = players;
-    state.history = [];
-    state.scoreMode = scoreMode;
-    state.session = { mode: 'host', roomCode };
-
-    saveState();
-    attachRoomListener(roomCode);
-    applySessionModeUI();
-    renderScoreboard();
-    renderHistory();
-    showScreen("dashboard");
-  } catch (err) {
-    console.error("Không thể tạo phòng:", err);
-    showNotice("Không thể tạo phòng. Kiểm tra kết nối mạng rồi thử lại.");
-  } finally {
-    if (submitBtn) submitBtn.disabled = false;
-  }
-}
-
-async function handleJoinRoom(e) {
-  e.preventDefault();
-  const codeInput = document.getElementById("join-room-code-input");
-  const code = codeInput.value.trim().toUpperCase();
-  if (!code) return;
-
-  const submitBtn = e.target.querySelector("button[type=submit]");
-  submitBtn.disabled = true;
-  try {
-    const roomData = await joinRoom(code);
-    state.players = roomData.players;
-    state.history = roomData.history || [];
-    state.scoreMode = roomData.scoreMode || DEFAULT_STATE.scoreMode;
-    state.session = { mode: 'guest', roomCode: code };
-
-    saveState();
-    attachRoomListener(code);
-    applySessionModeUI();
-    renderScoreboard();
-    renderHistory();
-    showScreen("dashboard");
-  } catch (err) {
-    if (err.message === 'ROOM_NOT_FOUND') {
-      showNotice("Không tìm thấy phòng với mã này. Kiểm tra lại mã phòng!");
-    } else {
-      console.error("Không thể vào phòng:", err);
-      showNotice("Không thể kết nối. Kiểm tra mạng và thử lại.");
-    }
-  } finally {
-    submitBtn.disabled = false;
-  }
-}
-
-// ==========================================================================
-// SHARED ROOM: FIRESTORE SYNC (GIAI ĐOẠN 1)
-// ==========================================================================
-function generateRoomCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O or 1/I, easy to read aloud
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
-
-function ensureAnonymousAuth() {
-  if (auth.currentUser) return Promise.resolve(auth.currentUser);
-  return auth.signInAnonymously().then(cred => cred.user);
-}
-
-async function createRoom(players, scoreMode) {
-  const user = await ensureAnonymousAuth();
-
-  let code;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    code = generateRoomCode();
-    const existing = await db.collection("rooms").doc(code).get();
-    if (!existing.exists) break;
-  }
-
-  await db.collection("rooms").doc(code).set({
-    hostUid: user.uid,
-    scoreMode: scoreMode,
-    players: players,
-    history: [],
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  return code;
-}
-
-async function joinRoom(code) {
-  await ensureAnonymousAuth();
-  const snap = await db.collection("rooms").doc(code).get();
-  if (!snap.exists) {
-    throw new Error("ROOM_NOT_FOUND");
-  }
-  return snap.data();
-}
-
-function attachRoomListener(roomCode) {
-  if (unsubscribeRoom) unsubscribeRoom();
-  unsubscribeRoom = db.collection("rooms").doc(roomCode).onSnapshot((snap) => {
-    if (!snap.exists) {
-      // The host closed/deleted the room (e.g. via "Cài đặt lại") — everyone
-      // still connected (guests, or this host reconnecting elsewhere) gets kicked out.
-      if (state.session.mode !== 'local') {
-        handleRoomClosed();
-      }
-      return;
-    }
-    const data = snap.data();
-    state.players = data.players;
-    state.history = data.history || [];
-    state.scoreMode = data.scoreMode || state.scoreMode;
-    localStorage.setItem("tienlen_scorekeeper_data", JSON.stringify(state));
-    renderScoreboard();
-    renderHistory();
-  }, (err) => {
-    console.error("Mất kết nối tới phòng:", err);
-  });
-}
-
-// Lets a guest voluntarily leave a shared room (the room itself keeps running
-// for everyone else — only the host closing it via "Xóa toàn bộ" ends it).
-function handleLeaveRoom() {
-  showConfirm(
-    "Bạn có chắc muốn rời khỏi phòng này không? Bạn có thể vào lại bất cứ lúc nào bằng mã phòng.",
-    handleResetAll,
-    { title: "Rời Phòng", confirmLabel: "Rời phòng", cancelLabel: "Ở lại", danger: false }
-  );
-}
-
-// Called on every device still connected to a room right after it disappears
-// from Firestore. Boots the user back to the welcome screen.
-function handleRoomClosed() {
-  if (unsubscribeRoom) {
-    unsubscribeRoom();
-    unsubscribeRoom = null;
-  }
-  // Reset first (it also runs closeAllModals()), then show the notice on top
-  // of the fresh welcome screen — otherwise the reset would instantly close
-  // the notice we're about to show.
-  handleResetAll();
-  showNotice("Phòng đã được chủ phòng đóng. Bạn sẽ được đưa về màn hình chính.");
-}
-
-// Show/hide guest-only vs host-only UI, and render the room-code banner
-function applySessionModeUI() {
-  const appEl = document.getElementById("app");
-  appEl.classList.toggle("guest-mode", state.session.mode === 'guest');
-  renderRoomInfoBanner();
-}
-
-function renderRoomInfoBanner() {
-  const banner = document.getElementById("room-info-banner");
-  if (!banner) return;
-
-  if (state.session.mode === 'host') {
-    banner.classList.remove("hidden");
-    banner.innerHTML = `
-      <span class="room-info-text">Mã phòng: <strong>${escapeHTML(state.session.roomCode)}</strong></span>
-      <button type="button" id="btn-copy-room-code" class="btn-copy-code">Sao chép mã phòng</button>
-    `;
-    const copyBtn = document.getElementById("btn-copy-room-code");
-    copyBtn.addEventListener("click", () => {
-      const code = state.session.roomCode;
-      navigator.clipboard.writeText(code).then(() => {
-        const original = copyBtn.textContent;
-        copyBtn.textContent = "✓ Đã sao chép!";
-        setTimeout(() => { copyBtn.textContent = original; }, 1500);
-      }).catch(() => {
-        showNotice("Không thể tự sao chép. Mã phòng của bạn: " + code);
-      });
-    });
-  } else if (state.session.mode === 'guest') {
-    banner.classList.remove("hidden");
-    banner.innerHTML = `
-      <span class="room-info-text">🔴 Đang xem trực tiếp · Phòng <strong>${escapeHTML(state.session.roomCode)}</strong></span>
-      <button type="button" id="btn-leave-room" class="btn-copy-code">Rời phòng</button>
-    `;
-    document.getElementById("btn-leave-room").addEventListener("click", handleLeaveRoom);
-  } else {
-    banner.classList.add("hidden");
-    banner.innerHTML = "";
-  }
 }
 
 // ==========================================================================
@@ -682,7 +365,7 @@ function renderScoreboard() {
     ranksMap[sortedPlayers[i].id] = currentRank;
   }
 
-  // Render cards in the default layout order (IDs 1, 2, 3, 4) so players don't jump around physically, 
+  // Render cards in the default layout order (IDs 1, 2, 3, 4) so players don't jump around physically,
   // but they display their dynamic Rank, Badge color, and Leader styling.
   state.players.forEach(player => {
     const rank = ranksMap[player.id];
@@ -723,11 +406,11 @@ function renderScoreboard() {
         <!-- Center/Right Part: Score display with quick adjusters -->
         <div class="card-center">
           <button class="btn-adjust btn-adjust-minus" onclick="adjustScoreQuick(${player.id}, -${quickAmt})">-${quickAmt}</button>
-          
+
           <div class="score-display-wrapper">
             <span class="player-total-score ${scoreClass}">${player.score}</span>
           </div>
-          
+
           <button class="btn-adjust btn-adjust-plus" onclick="adjustScoreQuick(${player.id}, ${quickAmt})">+${quickAmt}</button>
         </div>
       </div>
@@ -1615,44 +1298,7 @@ function handleEditNameSubmit(e) {
 // ==========================================================================
 // RESET GAME LOGIC
 // ==========================================================================
-// Opens the reset modal, showing the host-only 2-choice variant (clear
-// history vs. close the room) instead of the single local "wipe everything"
-// button when this device is hosting a shared room.
-function openResetModal() {
-  const isHost = state.session.mode === 'host';
-  document.getElementById("reset-modal-local-text").classList.toggle("hidden", isHost);
-  document.getElementById("reset-modal-local-actions").classList.toggle("hidden", isHost);
-  document.getElementById("reset-modal-host-text").classList.toggle("hidden", !isHost);
-  document.getElementById("reset-modal-host-actions").classList.toggle("hidden", !isHost);
-  openModal("reset-confirm");
-}
-
-// Host-only: reset scores/history to zero but keep the room, players and
-// connected guests as-is (guests see the reset live via saveState's sync).
-function handleClearHistory() {
-  state.players.forEach(p => { p.score = 0; });
-  state.history = [];
-  saveState();
-  closeAllModals();
-  renderScoreboard();
-  renderHistory();
-  showNotice("Đã xóa lịch sử ghi nhận. Điểm số đã về 0.");
-}
-
 function handleResetAll() {
-  // Closing the room here (not just leaving it) is what boots any connected
-  // guests out via attachRoomListener's "!snap.exists" branch.
-  if (state.session.mode === 'host' && state.session.roomCode) {
-    db.collection("rooms").doc(state.session.roomCode).delete().catch((err) => {
-      console.error("Không thể đóng phòng trên server:", err);
-    });
-  }
-
-  if (unsubscribeRoom) {
-    unsubscribeRoom();
-    unsubscribeRoom = null;
-  }
-
   localStorage.removeItem("tienlen_scorekeeper_data");
   state = {
     players: [
@@ -1663,8 +1309,7 @@ function handleResetAll() {
     ],
     history: [],
     currentScreen: 'welcome',
-    scoreMode: DEFAULT_STATE.scoreMode,
-    session: { mode: 'local', roomCode: null }
+    scoreMode: DEFAULT_STATE.scoreMode
   };
 
   // Clear setup inputs to defaults
@@ -1672,18 +1317,9 @@ function handleResetAll() {
     document.getElementById(`player-${i}-input`).value = `Người chơi ${i}`;
   }
 
-  // Reset welcome-screen mode selection back to "1 Máy" / setup card
-  pendingSessionMode = 'local';
-  document.querySelectorAll(".btn-session-mode").forEach(b => {
-    b.classList.toggle("active", b.getAttribute("data-session-mode") === 'local');
-  });
-  document.getElementById("join-room-card").classList.add("hidden");
-  document.getElementById("setup-card").classList.remove("hidden");
-
   closeAllModals();
   closeAllSheets();
   renderRoundScoreModeOptions();
-  applySessionModeUI();
   saveState();
   showScreen("welcome");
 }
@@ -1757,4 +1393,3 @@ function escapeHTML(str) {
 
 // Expose functions to global scope for inline HTML event handlers
 window.adjustScoreQuick = adjustScoreQuick;
-

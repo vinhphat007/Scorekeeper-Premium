@@ -1,10 +1,9 @@
-const CACHE_NAME = "scorekeeper-v4";
+const CACHE_NAME = "scorekeeper-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
-  "./firebase-config.js",
   "./manifest.json",
   "./icons/logo.png"
 ];
@@ -32,8 +31,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Only handle same-origin GET requests; let Firebase/Firestore/Google Fonts
-  // and any other cross-origin traffic go straight to the network untouched.
+  // Only handle same-origin GET requests; let Google Fonts and any other
+  // cross-origin traffic go straight to the network untouched.
   if (event.request.method !== "GET" || url.origin !== self.location.origin) {
     return;
   }

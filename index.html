@@ -44,11 +44,7 @@
       </div>
 
       <div class="welcome-body">
-        <div class="card setup-card" id="setup-card">
-          <div class="session-mode-tabs" id="session-mode-tabs">
-            <button type="button" class="btn-session-mode active" data-session-mode="local">📱 1 Máy</button>
-            <button type="button" class="btn-session-mode" data-session-mode="host">📡 Tạo Phòng</button>
-          </div>
+        <div class="card setup-card">
           <h2>Nhập tên người chơi</h2>
           <form id="setup-form">
             <div class="input-group">
@@ -114,20 +110,6 @@
               </svg>
             </button>
           </form>
-          <button type="button" id="btn-goto-join" class="link-join-room">Đã có phòng? Vào phòng tại đây</button>
-        </div>
-
-        <div class="card join-room-card hidden" id="join-room-card">
-          <h2>Vào phòng đang chơi</h2>
-          <form id="join-room-form">
-            <div class="input-group">
-              <label for="join-room-code-input">Mã phòng</label>
-              <input type="text" id="join-room-code-input" class="room-code-input" maxlength="6" required
-                placeholder="VD: AB12CD" autocapitalize="characters" autocomplete="off">
-            </div>
-            <button type="submit" class="btn btn-primary btn-large btn-block">Tham gia</button>
-          </form>
-          <button type="button" id="btn-back-to-setup" class="link-join-room">Quay lại</button>
         </div>
       </div>
     </section>
@@ -158,8 +140,6 @@
           </button>
         </div>
       </header>
-
-      <div id="room-info-banner" class="room-info-banner hidden"></div>
 
       <main class="dashboard-body">
         <!-- Live scoreboard cards will be rendered dynamically here -->
@@ -544,27 +524,17 @@
           <button class="btn-close-modal">&times;</button>
         </div>
         <div class="modal-body">
-          <!-- Local (single-device) mode: one destructive action -->
-          <p class="reset-warning-text" id="reset-modal-local-text">Hành động này sẽ xóa toàn bộ điểm số, lịch sử ván
-            đấu và danh sách người chơi hiện tại. Bạn có chắc chắn muốn làm mới?</p>
-          <div class="modal-actions" id="reset-modal-local-actions">
+          <p class="reset-warning-text">Hành động này sẽ xóa toàn bộ điểm số, lịch sử ván đấu và danh sách người chơi
+            hiện tại. Bạn có chắc chắn muốn làm mới?</p>
+          <div class="modal-actions">
             <button type="button" class="btn btn-outline btn-close-modal">Hủy bỏ</button>
             <button id="btn-confirm-reset" class="btn btn-danger">Xóa toàn bộ</button>
-          </div>
-
-          <!-- Host (shared room) mode: separate "reset scores" from "close room" -->
-          <p class="reset-warning-text hidden" id="reset-modal-host-text">"Xóa lịch sử ghi nhận" chỉ đưa điểm về 0 và
-            giữ nguyên phòng đang chơi. "Xóa phòng" sẽ kết thúc phòng, đưa mọi người về màn hình chính.</p>
-          <div class="modal-actions modal-actions-column hidden" id="reset-modal-host-actions">
-            <button id="btn-confirm-clear-history" class="btn btn-warning btn-block">Xóa lịch sử ghi nhận</button>
-            <button id="btn-confirm-close-room" class="btn btn-danger btn-block">Xóa phòng (Kết thúc)</button>
-            <button type="button" class="btn btn-outline btn-block btn-close-modal">Hủy bỏ</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MODAL: GENERIC CONFIRM (Yes/No) — used for leave room, undo, clear history, close room -->
+    <!-- MODAL: GENERIC CONFIRM (Yes/No) — currently used for the Undo confirmation -->
     <div id="modal-confirm" class="modal-overlay">
       <div class="modal">
         <div class="modal-header">
@@ -598,11 +568,6 @@
     </div>
   </div>
 
-  <!-- Firebase (compat build: keeps app.js as a plain global-scope script, no ES module refactor needed) -->
-  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-auth-compat.js"></script>
-  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 

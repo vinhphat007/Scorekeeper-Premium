@@ -141,6 +141,10 @@
         </div>
       </header>
 
+      <div id="cafe-scene" class="cafe-scene">
+        <span class="cafe-hint">Kéo để xoay · Chụm/cuộn để zoom</span>
+      </div>
+
       <main class="dashboard-body">
         <!-- Live scoreboard cards will be rendered dynamically here -->
         <div id="scoreboard-grid" class="scoreboard-grid">
@@ -568,6 +572,9 @@
     </div>
   </div>
 
+  <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+  <!-- Module scripts are deferred, so CafeScene is ready before app.js's DOMContentLoaded init -->
+  <script type="module" src="cafe-scene.js"></script>
   <script src="app.js"></script>
 </body>
 

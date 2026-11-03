@@ -1,9 +1,20 @@
-const CACHE_NAME = "scorekeeper-v5";
+const CACHE_NAME = "scorekeeper-v8";
+const CHARACTER_MODELS = [
+  "male-a", "male-b", "male-c", "male-d", "male-e", "male-f",
+  "female-b", "female-c", "female-d", "female-e", "female-f"
+].map((name) => `./assets/characters/character-${name}.glb`);
 const APP_SHELL = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
+  "./cafe-scene.js",
+  "./vendor/three.module.min.js",
+  "./vendor/jsm/loaders/GLTFLoader.js",
+  "./vendor/jsm/utils/BufferGeometryUtils.js",
+  "./vendor/jsm/utils/SkeletonUtils.js",
+  "./assets/characters/Textures/colormap.png",
+  ...CHARACTER_MODELS,
   "./manifest.json",
   "./icons/logo.png"
 ];

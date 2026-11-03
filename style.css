@@ -511,6 +511,141 @@ body {
   gap: 12px;
 }
 
+/* ==========================================================================
+   3D CAFE SCENE (players around one table)
+   ========================================================================== */
+.cafe-scene {
+  position: relative;
+  flex-shrink: 0;
+  height: clamp(220px, 36vh, 380px);
+  overflow: hidden;
+  background: #2a1d16;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cafe-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.cafe-canvas:active {
+  cursor: grabbing;
+}
+
+.cafe-label-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cafe-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  background: rgba(10, 11, 16, 0.78);
+  border: 1.5px solid var(--player-color);
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  will-change: transform;
+}
+
+.cafe-label-name {
+  color: var(--text-primary);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cafe-label-score {
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+
+.cafe-label-score.pos {
+  color: #34d399;
+}
+
+.cafe-label-score.neg {
+  color: #f87171;
+}
+
+.cafe-float {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 20px;
+  font-weight: 800;
+  pointer-events: none;
+  animation: cafeFloatUp 1.2s ease-out forwards;
+}
+
+.cafe-float.pos {
+  color: #34d399;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.6), 0 2px 2px #000;
+}
+
+.cafe-float.neg {
+  color: #f87171;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6), 0 2px 2px #000;
+}
+
+@keyframes cafeFloatUp {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.7); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -40px) scale(1); }
+}
+
+.cafe-hint {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 1;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(10, 11, 16, 0.6);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Tighter score cards so the list still fits under the scene */
+.cafe-scene:not(.hidden) ~ .dashboard-body {
+  padding-top: 12px;
+}
+
+.cafe-scene:not(.hidden) ~ .dashboard-body .scoreboard-grid {
+  gap: 8px;
+}
+
+.cafe-scene:not(.hidden) ~ .dashboard-body .player-score-card {
+  padding: 8px 14px;
+}
+
+.cafe-scene:not(.hidden) ~ .dashboard-body .player-rank-badge {
+  width: 32px;
+  height: 32px;
+}
+
+.cafe-scene:not(.hidden) ~ .dashboard-body .player-total-score {
+  font-size: 22px;
+}
+
+.cafe-scene:not(.hidden) ~ .dashboard-body .btn-adjust {
+  width: 34px;
+  height: 34px;
+}
+
 /* Score Card Component */
 .player-score-card {
   position: relative;

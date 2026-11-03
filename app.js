@@ -89,6 +89,9 @@ function initApp() {
   loadState();
   setupEventListeners();
   registerServiceWorker();
+  if (!(window.CafeScene && CafeScene.init(document.getElementById("cafe-scene")))) {
+    document.getElementById("cafe-scene").classList.add("hidden");
+  }
   renderRoundScoreModeOptions();
   renderScreen();
   if (state.currentScreen === 'dashboard') {
@@ -417,6 +420,8 @@ function renderScoreboard() {
     `;
     container.insertAdjacentHTML("beforeend", cardHTML);
   });
+
+  if (window.CafeScene) CafeScene.update(state.players, ranksMap);
 }
 
 // Adjust Score Quick (+1 / -1)
@@ -451,6 +456,8 @@ function adjustScoreQuick(playerId, amount) {
 
 // Floating points trigger
 function triggerFloatingPoints(playerId, delta) {
+  if (window.CafeScene) CafeScene.pulse(playerId, delta);
+
   const card = document.querySelector(`.player-score-card[data-player-id="${playerId}"]`);
   if (!card) return;
 
@@ -623,6 +630,8 @@ function handleSaveRound() {
   closeAllSheets();
   renderScoreboard();
   renderHistory();
+
+  if (window.CafeScene) CafeScene.roundEnd(ranks[0]);
 
   // Floating score updates
   const floatValues = [values.first, values.second, values.third, values.fourth];
@@ -1055,6 +1064,8 @@ function handleSaveToitrang() {
   closeAllSheets();
   renderScoreboard();
   renderHistory();
+
+  if (window.CafeScene) CafeScene.roundEnd(winnerId);
 
   // Floating animations scaled
   triggerFloatingPoints(winnerId, winnerPts);

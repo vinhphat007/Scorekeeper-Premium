@@ -462,9 +462,9 @@ body {
    SCREEN 2: DASHBOARD SCREEN
    ========================================================================== */
 .app-header {
-  min-height: calc(80px + var(--safe-area-top));
+  min-height: calc(60px + var(--safe-area-top));
   flex-shrink: 0;
-  padding: calc(24px + var(--safe-area-top)) 20px 0px 20px;
+  padding: calc(20px + var(--safe-area-top)) 20px 0px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;

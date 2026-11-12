@@ -464,7 +464,7 @@ body {
 .app-header {
   min-height: calc(80px + var(--safe-area-top));
   flex-shrink: 0;
-  padding: calc(24px + var(--safe-area-top)) 20px 16px 20px;
+  padding: calc(24px + var(--safe-area-top)) 20px 0px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -518,7 +518,7 @@ body {
 .cafe-scene {
   position: relative;
   flex-shrink: 0;
-  margin-block: 16px;
+  margin-block: 10px;
   height: clamp(220px, 36vh, 380px);
   overflow: hidden;
   background: #2a1d16;

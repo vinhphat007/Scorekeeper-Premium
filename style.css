@@ -257,7 +257,7 @@ body {
    ========================================================================== */
 #welcome-screen {
   /* justify-content: space-between; */
-  padding: 32px 24px calc(24px + var(--safe-area-bottom));
+  padding: calc(32px + var(--safe-area-top)) 24px calc(24px + var(--safe-area-bottom));
   overflow-y: auto;
 }
 
@@ -463,7 +463,7 @@ body {
    ========================================================================== */
 .app-header {
   height: 72px;
-  padding: calc(16px + var(--safe-area-top)) 20px 16px 20px;
+  padding: calc(24px + var(--safe-area-top)) 20px 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;

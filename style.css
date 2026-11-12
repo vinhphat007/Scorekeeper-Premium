@@ -462,7 +462,8 @@ body {
    SCREEN 2: DASHBOARD SCREEN
    ========================================================================== */
 .app-header {
-  height: 72px;
+  min-height: calc(80px + var(--safe-area-top));
+  flex-shrink: 0;
   padding: calc(24px + var(--safe-area-top)) 20px 16px 20px;
   display: flex;
   align-items: center;
@@ -517,6 +518,7 @@ body {
 .cafe-scene {
   position: relative;
   flex-shrink: 0;
+  margin-block: 16px;
   height: clamp(220px, 36vh, 380px);
   overflow: hidden;
   background: #2a1d16;
@@ -621,7 +623,7 @@ body {
 
 /* Tighter score cards so the list still fits under the scene */
 .cafe-scene:not(.hidden) ~ .dashboard-body {
-  padding-top: 12px;
+  padding-top: 0;
 }
 
 .cafe-scene:not(.hidden) ~ .dashboard-body .scoreboard-grid {

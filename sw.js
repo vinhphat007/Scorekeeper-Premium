@@ -1,4 +1,4 @@
-const CACHE_NAME = "scorekeeper-v21";
+const CACHE_NAME = "scorekeeper-v22";
 const CHARACTER_MODELS = [
   "male-a", "male-b", "male-c", "male-d", "male-e", "male-f",
   "female-b", "female-c", "female-d", "female-e", "female-f"

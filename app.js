@@ -1095,6 +1095,7 @@ function renderHistory() {
     emptyEl.classList.remove("hidden");
     listEl.classList.add("hidden");
     undoBtn.classList.add("hidden");
+    renderDashboardHistory();
     return;
   }
 
@@ -1158,7 +1159,7 @@ function renderHistory() {
 
       scoreGridHTML += `
         <div class="history-player-score">
-          <span class="history-pname">${escapeHTML(p.name)}</span>
+          <span class="history-pname">${escapeHTML(p.name)} (${total + val})</span>
           <span class="history-pval ${valClass}">${displayVal}</span>
           <span class="history-ptotal ${totalClass}">${displayTotal}</span>
         </div>
@@ -1178,6 +1179,16 @@ function renderHistory() {
     `;
     listEl.insertAdjacentHTML("beforeend", cardHTML);
   });
+  renderDashboardHistory();
+}
+
+function renderDashboardHistory() {
+  const list = document.getElementById('dashboard-history-items');
+  const empty = document.getElementById('dashboard-history-empty');
+  if (!list || !empty) return;
+  list.innerHTML = document.getElementById('history-items').innerHTML;
+  empty.classList.toggle('hidden', state.history.length > 0);
+  list.classList.toggle('hidden', state.history.length === 0);
 }
 
 function confirmUndo() {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "scorekeeper-v10";
+const CACHE_NAME = "scorekeeper-v20";
 const CHARACTER_MODELS = [
   "male-a", "male-b", "male-c", "male-d", "male-e", "male-f",
   "female-b", "female-c", "female-d", "female-e", "female-f"
@@ -8,6 +8,9 @@ const APP_SHELL = [
   "./index.html",
   "./style.css",
   "./app.js",
+  "./room.js",
+  "./room-config.js",
+  "./firebase-room.js",
   "./cafe-scene.js",
   "./vendor/three.module.min.js",
   "./vendor/jsm/loaders/GLTFLoader.js",
@@ -41,6 +44,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/api/')) return;
 
   // Only handle same-origin GET requests; let Google Fonts and any other
   // cross-origin traffic go straight to the network untouched.

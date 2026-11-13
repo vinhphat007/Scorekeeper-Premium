@@ -1,6 +1,95 @@
 /* ==========================================================================
    DESIGN SYSTEM & VARIABLES
    ========================================================================== */
+#room-pin-form .input-group {
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+#room-pin-form label {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.pin-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#room-pin {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 64px;
+  margin-top: 4px;
+  padding: 12px 8px 12px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 10px;
+  text-align: center;
+  outline: none;
+  caret-color: var(--color-success);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#room-pin::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+#room-pin:focus {
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+
+#room-pin-error:empty {
+  display: none;
+}
+
+.room-status {
+  padding: 8px 16px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.viewer-history {
+  display: none;
+}
+
+.room-viewer .viewer-history {
+  display: block;
+}
+
+.room-viewer .host-scoreboard,
+.room-viewer .btn-edit-inline,
+.room-viewer .btn-adjust,
+.room-viewer .app-footer,
+.room-viewer #btn-reset-trigger,
+.room-viewer #btn-undo {
+  display: none !important;
+}
+
+.room-saving .btn-adjust,
+.room-saving .btn-edit-inline,
+.room-saving .app-footer,
+.room-saving #btn-reset-trigger,
+.room-saving #btn-undo,
+.room-saving #btn-confirm-round,
+.room-saving #btn-confirm-chop,
+.room-saving #btn-confirm-kill,
+.room-saving #btn-confirm-toitrang {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
 :root {
   /* Color Palette */
   --bg-primary: #0a0b10;
@@ -510,6 +599,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.dashboard-history-title {
+  margin-bottom: 14px;
+  font-size: 17px;
+  font-weight: 700;
 }
 
 /* ==========================================================================

@@ -1,7 +1,6 @@
 // One shared room. Firebase mode uses a local PIN gate without Authentication.
 (() => {
   const viewerLink = new URLSearchParams(location.search).get('room') === '1';
-  let token = sessionStorage.getItem('scorekeeper_host_token') || '';
   let host = false;
   let connected = false;
   let saving = false;
@@ -22,10 +21,11 @@
   }
   function forgetHost() {
     host = false;
-    token = '';
     pendingStart = null;
     sessionStorage.removeItem('scorekeeper_pin_host');
     sessionStorage.removeItem('scorekeeper_host_token');
+    localStorage.removeItem('scorekeeper_pin_host');
+    localStorage.removeItem('scorekeeper_host_token');
     document.getElementById('room-pin').value = '';
   }
   function apply(data) {
@@ -133,8 +133,7 @@
       event.preventDefault();
       const btn = document.getElementById('room-pin-submit'); btn.disabled = true;
       try {
-        const login = await api('/api/login', { method: 'POST', body: JSON.stringify({ pin: document.getElementById('room-pin').value }) });
-        token = login.token; sessionStorage.setItem('scorekeeper_host_token', token);
+        await api('/api/login', { method: 'POST', body: JSON.stringify({ pin: document.getElementById('room-pin').value }) });
         host = true;
         const room = await api('/api/room');
         closeAllModals(); apply(room);
@@ -152,6 +151,7 @@
       const session = await api('/api/session'); host = !viewerLink && session.host;
       connected = true;
       const room = await api('/api/room');
+      if (host && !room.state) forgetHost();
       if (viewerLink || host) apply(room); else { revision = room.revision; confirmed = clone(room.state); permissions(); status('Nhập tên và bắt đầu để vào phòng'); }
       if (leavingRoom) return;
       const receive = data => {

@@ -19,6 +19,7 @@ test('client PIN flow saves dashboard once; viewer blocks score mutations', asyn
     const redirects = []; const notices = []; const timers = [];
     const context = { console, URLSearchParams, URL, setTimeout:fn=>timers.push(fn), location:{ search:viewer ? '?room=1' : '', href:viewer ? 'http://localhost/?room=1' : 'http://localhost/', replace:url=>redirects.push(url) },
       sessionStorage:{ getItem(){ return ''; }, setItem(){}, removeItem(){} },
+      localStorage:{ removeItem(){} },
       document:{ addEventListener(type, fn){ handlers.push(fn); }, getElementById:element, body:{ classList:{ toggle(){} } } },
       window:{}, EventSource:class {},
       fetch: async (url, options) => {

@@ -26,10 +26,17 @@
   }
   window.RoomStore = {
     async request(route, options = {}) {
-      if (route === '/api/session') return { host: sessionStorage.getItem('scorekeeper_pin_host') === 'yes' };
+      if (route === '/api/session') {
+        // Migrate existing tabs; localStorage survives an iOS PWA process restart.
+        if (sessionStorage.getItem('scorekeeper_pin_host') === 'yes') {
+          localStorage.setItem('scorekeeper_pin_host', 'yes');
+          sessionStorage.removeItem('scorekeeper_pin_host');
+        }
+        return { host: localStorage.getItem('scorekeeper_pin_host') === 'yes' };
+      }
       if (route === '/api/login') {
         if (JSON.parse(options.body).pin !== '030102') throw new Error('Mã PIN không đúng.');
-        sessionStorage.setItem('scorekeeper_pin_host', 'yes');
+        localStorage.setItem('scorekeeper_pin_host', 'yes');
         return { token: '' };
       }
       if (!['PUT', 'DELETE'].includes(options.method)) return (await requestDatabase()).data;
